@@ -1,0 +1,10 @@
+#!/bin/zsh
+# Drive the running Topside app from the command line.
+#   ./topside-ctl open            open the notch (pinned)
+#   ./topside-ctl open:shelf      open a tab: home shelf clipboard notes timer apps mirror devices terminal prompter agents
+#   ./topside-ctl close
+#   ./topside-ctl settings
+#   ./topside-ctl shelf:/path/to/file   add a file to the tray
+#   ./topside-ctl timer:300             start a timer (seconds); stoptimer cancels
+#   ./topside-ctl "toast:Build finished"
+exec /usr/bin/osascript -l JavaScript -e 'function run(a){ObjC.import("Foundation");$.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("local.topside.control",a[0],$(),true)}' "${1:-open}"

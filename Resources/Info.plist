@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>Topside</string>
+    <key>CFBundleDisplayName</key><string>Topside</string>
+    <key>CFBundleIdentifier</key><string>local.topside.notch</string>
+    <key>CFBundleExecutable</key><string>Topside</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSUIElement</key><true/>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSCameraUsageDescription</key><string>Topside shows your camera in the Mirror tab so you can check how you look.</string>
+    <key>NSMicrophoneUsageDescription</key><string>Topside listens while the teleprompter follows your voice.</string>
+    <key>NSSpeechRecognitionUsageDescription</key><string>Topside matches what you say to your script so the teleprompter keeps pace.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key><string>Topside shows your upcoming events in the notch.</string>
+    <key>NSRemindersFullAccessUsageDescription</key><string>Topside shows your open reminders in the notch.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key><string>Topside shows when Bluetooth devices connect and disconnect.</string>
+    <key>NSAppleEventsUsageDescription</key><string>Topside controls media playback.</string>
+    <key>NSDownloadsFolderUsageDescription</key><string>Topside shows downloads in progress.</string>
+</dict>
+</plist>
