@@ -9,9 +9,6 @@ struct SettingsView: View {
     @AppStorage("swipeGestures") private var swipeGestures = true
     @AppStorage("theme") private var theme = "black"
     @AppStorage("glow") private var glow = false
-    @AppStorage("mediaActivity") private var mediaActivity = true
-    @AppStorage("hudEnabled") private var hudEnabled = true
-    @AppStorage("replaceSystemHUD") private var replaceSystemHUD = false
     @AppStorage("virtualNotch") private var virtualNotch = true
     @AppStorage("allDisplays") private var allDisplays = false
     @AppStorage("hideNotchBar") private var hideNotchBar = false

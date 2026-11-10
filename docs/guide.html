@@ -1,0 +1,1313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Topside — Build Guide</title>
+<style>
+  @page { size: Letter; margin: 16mm 15mm 14mm; }
+
+  :root {
+    --ink: #16181d;
+    --muted: #5c6370;
+    --faint: #8b93a1;
+    --rule: #dfe3ea;
+    --accent: #5b4bd6;
+    --code-bg: #f6f7f9;
+    --warn: #b4530b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { font-size: 10.5pt; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 { line-height: 1.22; margin: 0; font-weight: 600; }
+
+  h2 {
+    font-size: 19pt;
+    letter-spacing: -0.015em;
+    margin: 0 0 2mm;
+    padding-bottom: 2.5mm;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  h3 {
+    font-size: 12.5pt;
+    margin: 7mm 0 2mm;
+    letter-spacing: -0.005em;
+  }
+
+  h4 {
+    font-size: 10.5pt;
+    margin: 4.5mm 0 1.5mm;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-size: 8.5pt;
+  }
+
+  p { margin: 0 0 2.6mm; }
+
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+  li { margin-bottom: 1.2mm; }
+
+  a { color: var(--accent); text-decoration: none; }
+
+  code, pre, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  code { font-size: 0.88em; background: var(--code-bg); padding: 0.5mm 1.2mm; border-radius: 2px; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-left: 2.5px solid var(--accent);
+    border-radius: 3px;
+    padding: 3mm 3.5mm;
+    font-size: 8.1pt;
+    line-height: 1.45;
+    overflow: hidden;
+    white-space: pre-wrap;
+    margin: 0 0 3mm;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .page-break { break-before: page; }
+  section { break-inside: auto; }
+
+  /* Keep headings with the text that follows them, and avoid stranded lines. */
+  h2, h3, h4 { break-after: avoid; }
+  p, ul, ol { orphans: 2; widows: 2; }
+  pre, table { break-inside: auto; }
+
+  /* ---------- cover ---------- */
+
+  .cover {
+    height: 247mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    break-after: page;
+  }
+  .cover .eyebrow {
+    font-size: 9pt; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 4mm;
+  }
+  .cover h1 { font-size: 40pt; letter-spacing: -0.03em; margin-bottom: 3mm; }
+  .cover .sub { font-size: 14pt; color: var(--muted); line-height: 1.4; max-width: 125mm; font-weight: 400; }
+  .cover .shot { margin: 11mm 0; }
+  .cover .shot img { width: 100%; border-radius: 6px; }
+  .cover .meta {
+    display: flex; gap: 10mm; border-top: 1px solid var(--rule);
+    padding-top: 4mm; font-size: 9pt; color: var(--muted);
+  }
+  .cover .meta b { display: block; color: var(--ink); font-weight: 600; font-size: 9.5pt; }
+
+  /* ---------- figures ---------- */
+
+  figure { margin: 0 0 4mm; break-inside: avoid; }
+  figure img { width: 100%; display: block; border-radius: 5px; }
+  figure.framed img { border: 1px solid var(--rule); }
+  figcaption {
+    font-size: 8.3pt; color: var(--faint); margin-top: 1.6mm; line-height: 1.4;
+  }
+  figcaption b { color: var(--muted); font-weight: 600; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 5mm; }
+  .grid2 figure { margin-bottom: 0; }
+
+  /* ---------- tables ---------- */
+
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 0 0 3.5mm; }
+  th {
+    text-align: left; font-weight: 600; font-size: 8pt; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); border-bottom: 1.5px solid var(--ink);
+    padding: 0 3mm 1.5mm 0; vertical-align: bottom;
+  }
+  td { padding: 1.8mm 3mm 1.8mm 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  td:last-child, th:last-child { padding-right: 0; }
+  tr { break-inside: avoid; }
+  td.k { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 8.3pt; white-space: nowrap; }
+
+  /* ---------- callouts ---------- */
+
+  .note {
+    border: 1px solid var(--rule); border-left: 3px solid var(--warn);
+    background: #fdf8f2; border-radius: 3px; padding: 3mm 3.5mm; margin: 0 0 3.5mm;
+    font-size: 9.3pt; break-inside: avoid;
+  }
+  .note b { color: var(--warn); }
+
+  .key {
+    border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    background: #f8f7fe; border-radius: 3px; padding: 3mm 3.5mm; margin: 0 0 3.5mm;
+    font-size: 9.3pt; break-inside: avoid;
+  }
+
+  .lede { font-size: 11.5pt; color: var(--muted); margin: 0 0 5mm; line-height: 1.45; }
+
+  /* ---------- table of contents ---------- */
+
+  .toc { column-count: 2; column-gap: 9mm; font-size: 9.5pt; }
+  .toc div { break-inside: avoid; margin-bottom: 1.6mm; display: flex; gap: 2.5mm; }
+  .toc span.n { color: var(--accent); font-weight: 600; min-width: 5mm; }
+
+  /* ---------- the big prompt block ---------- */
+
+  .prompt {
+    border: 1.5px dashed var(--accent); border-radius: 4px; padding: 4mm;
+    background: #fbfaff; font-size: 8.4pt; line-height: 1.5; white-space: pre-wrap;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .pill {
+    display: inline-block; font-size: 7.6pt; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 0.6mm 1.8mm; border-radius: 3px;
+    background: #ececf5; color: var(--muted); vertical-align: 1px; margin-left: 1.5mm;
+  }
+  .pill.cut { background: #fbe9e9; color: #a23b3b; }
+  .pill.ok { background: #e6f4ea; color: #276c3c; }
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<div class="cover">
+  <div class="eyebrow">Complete Reproduction Guide</div>
+  <h1>Topside</h1>
+  <div class="sub">A macOS notch app, specified end to end — architecture, platform
+  techniques, design system, build steps, and every trap worth knowing before you start.</div>
+
+  <div class="shot"><img src="img/shot-home.png" alt="The Topside panel open on the Now Playing tab"></div>
+
+  <div class="meta">
+    <div><b>~2,700 lines</b>Swift 5.9 · SwiftUI + AppKit</div>
+    <div><b>10 source files</b>No third-party packages</div>
+    <div><b>macOS 14+</b>Built and run on macOS 27, Apple M4</div>
+  </div>
+</div>
+
+<!-- ============================ CONTENTS ============================ -->
+<section>
+  <h2>Contents</h2>
+  <div class="toc">
+    <div><span class="n">1</span><span>How to use this document</span></div>
+    <div><span class="n">2</span><span>What the app is</span></div>
+    <div><span class="n">3</span><span>Every screen</span></div>
+    <div><span class="n">4</span><span>Architecture</span></div>
+    <div><span class="n">5</span><span>The notch itself</span></div>
+    <div><span class="n">6</span><span>Platform techniques</span></div>
+    <div><span class="n">7</span><span>Feature specifications</span></div>
+    <div><span class="n">8</span><span>Design system</span></div>
+    <div><span class="n">9</span><span>Build and packaging</span></div>
+    <div><span class="n">10</span><span>Scripting interface</span></div>
+    <div><span class="n">11</span><span>How it evolved</span></div>
+    <div><span class="n">12</span><span>Traps and gotchas</span></div>
+    <div><span class="n">13</span><span>Permissions and privacy</span></div>
+    <div><span class="n">14</span><span>The reproduction prompt</span></div>
+    <div><span class="n">15</span><span>File manifest</span></div>
+  </div>
+
+  <h3>1 · How to use this document</h3>
+  <p>This is written to be handed to a capable coding AI, together with the single prompt
+  in <b>§14</b>, to reproduce an app of the same shape. It is deliberately specific about
+  the parts that are hard to guess: how a window sits over the notch, how the system's
+  Now Playing feed is reached, why the obvious way of resizing the window silently breaks
+  hovering, and which Swift expression will hang the type-checker.</p>
+
+  <p>Three ways to use it:</p>
+  <ul>
+    <li><b>Rebuild from scratch.</b> Give an AI §14's prompt plus this document. The
+      specifications in §5–§8 are complete enough to write against directly.</li>
+    <li><b>Port the idea.</b> §6 is the reusable part — those techniques apply to any
+      macOS menu bar or notch utility, not just this one.</li>
+    <li><b>Extend the existing app.</b> §4 and §15 map the code; §12 lists what will
+      bite you.</li>
+  </ul>
+
+  <div class="key">
+    <b>A caution about private APIs.</b> The Now Playing feature depends on
+    <code>MediaRemote.framework</code>, which is private and undocumented. It works on
+    macOS 27 as described here, and it may stop working on any future release. Everything
+    else in the app uses public frameworks.
+  </div>
+</section>
+
+<!-- ============================ WHAT IT IS ============================ -->
+<section class="page-break">
+  <h2>2 · What the app is</h2>
+
+  <p class="lede">A panel that lives in the MacBook's camera housing. Rest the pointer on
+  the notch and it drops down; move away and it collapses back into the hardware.</p>
+
+  <div class="grid2">
+    <figure>
+      <img src="img/shot-collapsed.png" alt="The collapsed app, indistinguishable from the camera housing">
+      <figcaption><b>At rest.</b> The window is exactly the size of the camera housing —
+      179 × 32 pt on a 13-inch M4 Air. Nothing spills into the menu bar, so the app is
+      invisible until it has something to say.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-toast.png" alt="A short alert dropping down beneath the notch">
+      <figcaption><b>An alert.</b> Transient messages drop <em>downward</em> at notch
+      width rather than spreading sideways, which keeps the menu bar clear.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Design rules the app holds to</h3>
+  <table>
+    <tr>
+      <td style="width:38%"><b>The notch is the window</b></td>
+      <td>Collapsed, the app occupies the housing and nothing more. Every state change
+      grows downward from it.</td>
+    </tr>
+    <tr>
+      <td><b>Hover, don't click</b></td>
+      <td>Opening is a 0.15 s dwell on the notch. Clicking also works. Closing happens
+      0.35 s after the pointer leaves, unless pinned.</td>
+    </tr>
+    <tr>
+      <td><b>Never duplicate the system</b></td>
+      <td>No volume or brightness overlays — macOS already draws those. The app only shows
+      what the system does not.</td>
+    </tr>
+    <tr>
+      <td><b>One row of options</b></td>
+      <td>All nine sections sit in a single row under the notch. The selected one expands
+      into a labelled pill; the rest stay as icons.</td>
+    </tr>
+    <tr>
+      <td><b>Quiet by default</b></td>
+      <td>Anything that reaches the network (weather, lyrics) or reads private data
+      (calendar, camera) is off until switched on.</td>
+    </tr>
+  </table>
+
+  <h3>The nine sections</h3>
+  <table>
+    <tr><td class="k" style="width:22%">Playing</td><td>Now playing from any app — artwork, scrubber, transport, optional lyrics</td></tr>
+    <tr><td class="k">Today</td><td>Upcoming calendar events and current weather</td></tr>
+    <tr><td class="k">Tray</td><td>A file shelf fed by dragging onto the notch; AirDrop, zip, Quick Look, share</td></tr>
+    <tr><td class="k">Clips</td><td>Searchable clipboard history, held in memory only</td></tr>
+    <tr><td class="k">Timer</td><td>Countdown timers and a Pomodoro cycle</td></tr>
+    <tr><td class="k">Mirror</td><td>Camera preview for checking yourself before a call</td></tr>
+    <tr><td class="k">System</td><td>Battery, CPU, memory and free storage</td></tr>
+    <tr><td class="k">Prompt</td><td>Teleprompter that scrolls on a clock or follows your voice</td></tr>
+    <tr><td class="k">Agents</td><td>Read-only status of local Claude Code and Codex sessions</td></tr>
+  </table>
+</section>
+
+<!-- ============================ EVERY SCREEN ============================ -->
+<section class="page-break">
+  <h2>3 · Every screen</h2>
+  <p class="lede">All captured from the running app at its real size, against a plain
+  backdrop. The panel is 400 pt wide and 212 pt tall in every one of them.</p>
+
+  <div class="grid2">
+    <figure>
+      <img src="img/shot-home.png" alt="Playing tab">
+      <figcaption><b>Playing.</b> Artwork, title and artist, a live waveform, a draggable
+      scrubber showing elapsed and remaining time, and transport controls. The icon at
+      right opens the player app.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-today.png" alt="Today tab">
+      <figcaption><b>Today.</b> Events for today and tomorrow, coloured by their calendar.
+      Weather sits top-right once a city is set; until then calendar access is requested
+      with a single button.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-shelf.png" alt="Tray tab">
+      <figcaption><b>Tray.</b> Files dragged onto the notch land here and survive
+      restarts. The dashed zone AirDrops anything dropped on it. Right-clicking a file
+      offers Quick Look, zip, share and more.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-clipboard.png" alt="Clips tab">
+      <figcaption><b>Clips.</b> Everything copied, searchable, newest first. Clicking a
+      row copies it back. History lives in memory only and is never written to disk.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-timer.png" alt="Timer tab, idle">
+      <figcaption><b>Timer, idle.</b> Four presets, a custom stepper, and a Pomodoro
+      button that alternates focus and break periods.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-timer-running.png" alt="Timer tab, running">
+      <figcaption><b>Timer, running.</b> The ring drains as time passes. While a timer
+      runs, the collapsed notch shows the remaining time beside it.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-mirror.png" alt="Mirror tab">
+      <figcaption><b>Mirror.</b> A mirrored camera preview. The frame here is a
+      placeholder — the real screenshot showed a person. Camera access is requested
+      the first time the tab is opened.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-devices.png" alt="System tab">
+      <figcaption><b>System.</b> Battery with charge state, CPU and memory as live bars,
+      and free storage. Refreshes every two seconds while visible.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-prompter.png" alt="Prompt tab">
+      <figcaption><b>Prompt.</b> A script editor with a words-per-minute slider. Start
+      scrolls steadily; Follow my voice uses on-device speech recognition to keep pace
+      with the speaker.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-agents.png" alt="Agents tab">
+      <figcaption><b>Agents.</b> Local AI coding sessions, their project, and whether each
+      is working, waiting or idle. Project names here are examples; the real ones were
+      replaced.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================ ARCHITECTURE ============================ -->
+<section>
+  <h2>4 · Architecture</h2>
+
+  <p class="lede">A plain SwiftPM executable — no Xcode project, no dependencies. AppKit
+  owns the window; SwiftUI draws everything inside it.</p>
+
+  <h3>Layers</h3>
+  <table>
+    <tr>
+      <td class="k" style="width:26%">AppDelegate</td>
+      <td>Owns one <code>NotchController</code> per eligible screen, the 15 Hz pointer
+      poll, the status item, and the settings window. Rebuilds controllers when displays
+      change.</td>
+    </tr>
+    <tr>
+      <td class="k">NotchController</td>
+      <td>One screen's panel. Computes notch geometry, resizes the window on open and
+      close, decides from the pointer position whether to open or close, interprets
+      scroll-wheel swipes.</td>
+    </tr>
+    <tr>
+      <td class="k">NotchModel</td>
+      <td><code>ObservableObject</code> holding <code>isOpen</code>, the selected tab,
+      pinned state and drop-target state. The single source of truth the SwiftUI tree
+      reads.</td>
+    </tr>
+    <tr>
+      <td class="k">Services</td>
+      <td>Singletons, each an <code>ObservableObject</code>, each polling or observing one
+      system facility. Views observe them directly; there is no coordinator between
+      them.</td>
+    </tr>
+    <tr>
+      <td class="k">Views</td>
+      <td><code>NotchRootView</code> switches between collapsed and open; the open view
+      renders a tab row and one tab body.</td>
+    </tr>
+  </table>
+
+  <h3>Source files</h3>
+  <table>
+    <tr><th>File</th><th style="width:12%">Lines</th><th>Holds</th></tr>
+    <tr><td class="k">App.swift</td><td>369</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
+    <tr><td class="k">Core.swift</td><td>279</td><td>Prefs, Tab enum, NotchModel, shared UI pieces, the notch outline shape</td></tr>
+    <tr><td class="k">MediaService.swift</td><td>287</td><td>Now Playing, transport commands, artwork, lyrics</td></tr>
+    <tr><td class="k">SystemServices.swift</td><td>156</td><td>Battery, downloads, CPU/memory/disk</td></tr>
+    <tr><td class="k">DataServices.swift</td><td>378</td><td>Calendar, weather, file tray, clipboard, timers</td></tr>
+    <tr><td class="k">Tools.swift</td><td>266</td><td>Teleprompter with speech recognition, agent-log reader</td></tr>
+    <tr><td class="k">NotchViews.swift</td><td>193</td><td>Root view, collapsed view, open view, tab row, waveform</td></tr>
+    <tr><td class="k">TabsA.swift</td><td>354</td><td>Playing, Today, Tray, Clips</td></tr>
+    <tr><td class="k">TabsB.swift</td><td>288</td><td>Timer, Mirror, System, Prompt, Agents</td></tr>
+    <tr><td class="k">SettingsView.swift</td><td>108</td><td>The settings form</td></tr>
+  </table>
+
+  <h3>Why singletons</h3>
+  <p>Every service is a shared singleton rather than an injected dependency. For an app
+  this size it removes a layer of plumbing: a tab body writes
+  <code>@ObservedObject private var media = MediaService.shared</code> and is done. The
+  cost is that services are hard to test in isolation — an acceptable trade here, and the
+  first thing to change if the app grows.</p>
+
+  <h3>Polling, not notifications</h3>
+  <p>Several services poll on a timer instead of subscribing to system notifications.
+  This is deliberate: the private Now Playing feed has no reliable public change
+  notification, and the pointer position cannot be tracked from a small window. The rates
+  are chosen to stay under 1% CPU at idle.</p>
+
+  <table>
+    <tr><th>What</th><th style="width:20%">Rate</th><th>Why that rate</th></tr>
+    <tr><td>Pointer position</td><td class="k">15 Hz</td><td>Fast enough that hovering feels instant</td></tr>
+    <tr><td>Now Playing</td><td class="k">0.67 Hz</td><td>Each poll spawns a process; elapsed time is interpolated between polls</td></tr>
+    <tr><td>Clipboard</td><td class="k">1.7 Hz</td><td>Cheap integer comparison against <code>changeCount</code></td></tr>
+    <tr><td>CPU / memory</td><td class="k">0.5 Hz</td><td>Only while the System tab is visible</td></tr>
+    <tr><td>Agent logs</td><td class="k">0.25 Hz</td><td>Only while the Agents tab is visible; reads file tails</td></tr>
+    <tr><td>Downloads</td><td class="k">0.5 Hz</td><td>Off unless enabled</td></tr>
+  </table>
+</section>
+
+<!-- ============================ THE NOTCH ============================ -->
+<section>
+  <h2>5 · The notch itself</h2>
+  <p class="lede">This section is the heart of the app. Get the geometry, the window and
+  the open/close transition right and the rest is ordinary SwiftUI.</p>
+
+  <h3>Measuring the hardware notch</h3>
+  <p>macOS exposes the notch indirectly. <code>NSScreen.safeAreaInsets.top</code> is
+  non-zero on a notched display and gives its height. The two menu bar strips either side
+  are <code>auxiliaryTopLeftArea</code> and <code>auxiliaryTopRightArea</code>; what they
+  do not cover is the notch.</p>
+
+<pre><code>let hasNotch = screen.safeAreaInsets.top &gt; 0
+let left  = screen.auxiliaryTopLeftArea?.width  ?? 0
+let right = screen.auxiliaryTopRightArea?.width ?? 0
+let notch = CGSize(width: screen.frame.width - left - right,
+                   height: screen.safeAreaInsets.top)</code></pre>
+
+  <p>On the 13-inch M4 Air this yields <b>179 × 32 pt</b> from a 1470 × 956 pt screen with
+  645.5 pt strips either side. On a Mac without a notch, fall back to a 185 pt wide
+  virtual notch whose height is the menu bar height, clamped to 24–38 pt.</p>
+
+  <h3>The window</h3>
+  <p>A borderless, non-activating <code>NSPanel</code> above the menu bar. Non-activating
+  matters: without it, the panel steals focus from whatever the person is typing in.</p>
+
+<pre><code>super.init(contentRect: .zero,
+           styleMask: [.borderless, .nonactivatingPanel],
+           backing: .buffered, defer: false)
+isFloatingPanel = true
+level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
+backgroundColor = .clear
+isOpaque = false
+hasShadow = false
+collectionBehavior = [.canJoinAllSpaces, .stationary,
+                      .fullScreenAuxiliary, .ignoresCycle]</code></pre>
+
+  <table>
+    <tr><td class="k" style="width:34%">mainMenu + 3</td><td>Above the menu bar, and above other utilities that sit at <code>mainMenu + 1</code></td></tr>
+    <tr><td class="k">canJoinAllSpaces</td><td>The notch is hardware; it should not belong to one desktop</td></tr>
+    <tr><td class="k">stationary</td><td>Excluded from Exposé, which would otherwise fly it around</td></tr>
+    <tr><td class="k">fullScreenAuxiliary</td><td>Stays available over full-screen apps</td></tr>
+    <tr><td class="k">hasShadow = false</td><td>AppKit's shadow traces the window rectangle, not the notch outline; SwiftUI draws the shadow instead</td></tr>
+  </table>
+
+  <p>The window is always larger than the visible panel — 90 pt wider and 70 pt taller
+  when open — so SwiftUI's shadow and open animation have somewhere to draw. The visible
+  shape is clipped inside.</p>
+
+  <h3>The outline</h3>
+  <p>A notch panel is not a rounded rectangle. Its top corners curve <em>outward</em> into
+  the menu bar, so the panel appears carved from the bezel; the bottom corners are
+  ordinary rounded corners. Both radii animate between the collapsed and open states.</p>
+
+<pre><code>struct NotchShape: Shape {
+    var topRadius: CGFloat      // flares outward into the menu bar
+    var bottomRadius: CGFloat   // ordinary rounded corner
+
+    var animatableData: AnimatablePair&lt;CGFloat, CGFloat&gt; {
+        get { AnimatablePair(topRadius, bottomRadius) }
+        set { topRadius = newValue.first; bottomRadius = newValue.second }
+    }
+
+    func path(in r: CGRect) -&gt; Path {
+        let tr = topRadius, br = min(bottomRadius, r.height / 2)
+        var p = Path()
+        p.move(to: CGPoint(x: r.minX, y: r.minY))
+        p.addQuadCurve(to: CGPoint(x: r.minX + tr, y: r.minY + tr),
+                       control: CGPoint(x: r.minX + tr, y: r.minY))
+        p.addLine(to: CGPoint(x: r.minX + tr, y: r.maxY - br))
+        p.addQuadCurve(to: CGPoint(x: r.minX + tr + br, y: r.maxY),
+                       control: CGPoint(x: r.minX + tr, y: r.maxY))
+        p.addLine(to: CGPoint(x: r.maxX - tr - br, y: r.maxY))
+        p.addQuadCurve(to: CGPoint(x: r.maxX - tr, y: r.maxY - br),
+                       control: CGPoint(x: r.maxX - tr, y: r.maxY))
+        p.addLine(to: CGPoint(x: r.maxX - tr, y: r.minY + tr))
+        p.addQuadCurve(to: CGPoint(x: r.maxX, y: r.minY),
+                       control: CGPoint(x: r.maxX - tr, y: r.minY))
+        p.closeSubpath()
+        return p
+    }
+}</code></pre>
+
+  <p>Collapsed, <code>topRadius</code> is 0 and the shape is a plain rounded-bottom block
+  matching the housing. Open, it becomes 9 pt and the flare appears.</p>
+
+  <h3>Hover detection</h3>
+  <p>SwiftUI's <code>onHover</code> cannot help here: the collapsed window is 179 pt wide,
+  so by the time the pointer is inside it the person has already aimed precisely. Instead
+  the app polls the global pointer position and compares it against rectangles it
+  computes itself.</p>
+
+<pre><code>pointerTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 15.0, repeats: true) { _ in
+    let m = NSEvent.mouseLocation
+    let b = NSEvent.pressedMouseButtons
+    for c in controllers { c.tick(mouse: m, buttons: b) }
+}
+RunLoop.main.add(pointerTimer!, forMode: .common)</code></pre>
+
+  <p>Two details that matter:</p>
+  <ul>
+    <li><b>Add the timer in <code>.common</code> mode.</b> Otherwise it stops firing while
+    a menu is open or a window is being dragged, and the panel freezes half-open.</li>
+    <li><b>Ignore hover while a mouse button is down.</b> Someone dragging a selection
+    across the top of the screen does not want a panel in the way — except when they are
+    dragging <em>files</em>, which is handled by the drop target instead.</li>
+  </ul>
+
+  <p>The open rectangle is inset by −18 pt on each side, giving a forgiving margin so the
+  panel does not snap shut when the pointer strays a few pixels.</p>
+
+  <h3>Opening and closing <span class="pill">read this one</span></h3>
+
+  <div class="note">
+    <b>The trap that cost the most time.</b> The obvious way to resize the window is a
+    Combine subscription on the model:
+    <code>model.$isOpen.sink { resize(open: $0) }</code>. With that in place the window
+    grew to the open size but the contents kept rendering collapsed — hovering looked
+    completely broken, and the window-size logs showed it <em>had</em> resized. The fix
+    was to drive the frame from an explicit callback invoked at the transition rather than
+    from a published side effect.
+  </div>
+
+<pre><code>final class NotchModel: ObservableObject {
+    @Published var isOpen = false
+    /// Resizes the window. Called strictly before opening and after closing,
+    /// never from a @Published side effect.
+    var onOpenChange: ((Bool) -&gt; Void)?
+
+    func open(_ tab: Tab? = nil) {
+        if let tab { self.tab = tab }
+        guard !isOpen else { return }
+        onOpenChange?(true)     // grow the window first
+        isOpen = true           // then let SwiftUI fill it
+    }
+
+    func close() {
+        guard isOpen else { return }
+        pinned = false
+        isOpen = false          // collapse the contents first
+        onOpenChange?(false)    // then shrink the window
+    }
+}</code></pre>
+
+  <p>Order matters in both directions: grow before filling so the content has room, and
+  collapse before shrinking so nothing is clipped mid-animation. Shrinking is further
+  delayed by 0.5 s to let the close animation finish, and re-checks
+  <code>!model.isOpen</code> in case the person came back.</p>
+
+  <p>On close the panel also surrenders first-responder status and is ordered out and back
+  in. Without that, a text field inside the panel keeps keyboard focus and the person's
+  next keystroke disappears into a collapsed window.</p>
+
+  <h3>Swipe gestures</h3>
+  <p>A local <code>scrollWheel</code> monitor reads two-finger swipes over the panel.
+  Horizontal swipes skip tracks when collapsed and change tabs when open; a downward
+  swipe opens, an upward swipe on the tab row closes. Accumulate deltas from
+  <code>.began</code>, require 45 pt of travel with a 1.5× dominance over the other axis,
+  and rate-limit to one gesture per 0.45 s.</p>
+</section>
+
+<!-- ============================ TECHNIQUES ============================ -->
+<section>
+  <h2>6 · Platform techniques</h2>
+  <p class="lede">The parts that are genuinely hard to discover. Each is self-contained
+  and portable to any other macOS utility.</p>
+
+  <h3>Reading system-wide Now Playing</h3>
+  <p>macOS publishes one Now Playing session covering every player — Music, Spotify,
+  browsers, podcast apps. It lives in <code>MediaRemote.framework</code>, which is
+  private. A normal app that loads the framework directly is refused the modern
+  <code>MRNowPlayingRequest</code> interface.</p>
+
+  <p>The workaround: shell out to the system scripting host, which <em>is</em> permitted
+  to load it. <code>osascript -l JavaScript</code> runs a JXA snippet that reads the
+  session and prints JSON.</p>
+
+<pre><code>ObjC.import('Foundation');
+const b = $.NSBundle.bundleWithPath(
+    '/System/Library/PrivateFrameworks/MediaRemote.framework/');
+b.load;
+const R = $.NSClassFromString('MRNowPlayingRequest');
+const i = R.localNowPlayingItem;        // the track
+const p = R.localNowPlayingPlayerPath;  // which app is playing it
+const d = i.nowPlayingInfo;             // the metadata dictionary
+// keys are kMRMediaRemoteNowPlayingInfoTitle, …Artist, …Album,
+// …Duration, …ElapsedTime, …PlaybackRate, …Timestamp
+</code></pre>
+
+  <p>Transport commands go through a C function in the same framework. The integer is a
+  command code.</p>
+
+<pre><code>ObjC.bindFunction('MRMediaRemoteSendCommand', ['bool', ['int', 'id']]);
+$.MRMediaRemoteSendCommand(2, $());   // 0 play · 1 pause · 2 toggle
+                                      // 4 next · 5 previous
+ObjC.bindFunction('MRMediaRemoteSetElapsedTime', ['void', ['double']]);
+$.MRMediaRemoteSetElapsedTime(90.0);  // seek</code></pre>
+
+  <div class="key">
+    <b>Identify the real player.</b> <code>playerPath.client.bundleIdentifier</code> is
+    often a helper process. Prefer
+    <code>client.parentApplicationBundleIdentifier</code> when it is set, so a browser
+    reports as the browser rather than its media helper.
+  </div>
+
+  <h4>Smooth elapsed time from a slow poll</h4>
+  <p>Polling twice a second would be wasteful — each poll spawns a process. Instead poll
+  every 1.5 s and interpolate. The feed reports the elapsed time as it was at
+  <code>Timestamp</code>, not now, so project it forward:</p>
+
+<pre><code>func elapsed(at now: Date = Date()) -&gt; Double {
+    let e = elapsedBase + (isPlaying ? now.timeIntervalSince(baseDate) * rate : 0)
+    return duration &gt; 0 ? min(max(e, 0), duration) : max(e, 0)
+}</code></pre>
+
+  <p>Anchor <code>baseDate</code> to the reported timestamp while playing, and to
+  <code>Date()</code> while paused. Drive the scrubber from
+  <code>TimelineView(.periodic(from: .now, by: 0.5))</code> so it ticks without the
+  service publishing.</p>
+
+  <h3>Album artwork, which is the awkward part</h3>
+  <p>The Now Playing feed usually carries <em>no image</em>. Inspecting a live session
+  shows only an identifier:</p>
+
+<pre><code>ArtworkIdentifier = cf2870489492a3bc#tr:9bf4b691957b0969
+ArtworkData       = nil
+ArtworkMIMEType   = nil
+artwork           = nil</code></pre>
+
+  <p>So the app walks a chain, stopping at the first source that yields an image:</p>
+  <ol>
+    <li><b>The feed</b> — <code>item.artwork.imageData</code>, then
+      <code>ArtworkData</code>. Retried once after 0.8 s, because the picture sometimes
+      arrives a moment after the title.</li>
+    <li><b>The player itself.</b> For Music, AppleScript returns
+      <code>raw data of artwork 1 of current track</code> as
+      <code>«data tdtaFFD8FFE0…»</code> — a hex string that must be decoded to bytes.
+      For Spotify, <code>artwork url of current track</code> gives an HTTPS URL to
+      fetch.</li>
+    <li><b>The app icon</b>, as a last resort, so the slot is never empty.</li>
+  </ol>
+
+<pre><code>// Decoding Music's «data tdta…» payload
+guard let start = out.range(of: "«data ")?.upperBound,
+      let end = out.lastIndex(of: "»") else { return nil }
+let hex = Array(out[start..&lt;end].dropFirst(4).utf8)   // drop the "tdta" tag
+var bytes = [UInt8]()
+var i = 0
+while i + 1 &lt; hex.count {
+    guard let hi = nibble(hex[i]), let lo = nibble(hex[i + 1]) else { break }
+    bytes.append(hi &lt;&lt; 4 | lo)
+    i += 2
+}
+return NSImage(data: Data(bytes))</code></pre>
+
+  <div class="note"><b>Consequence.</b> Asking Music for artwork triggers a one-time
+  Automation permission prompt. If the person declines, covers silently fall back to the
+  app icon. Browsers expose no artwork at all, so they always show their icon.</div>
+
+  <h3>Battery and power</h3>
+  <p><code>IOKit.ps</code>, with a run-loop source so changes arrive as events rather than
+  by polling:</p>
+
+<pre><code>let src = IOPSNotificationCreateRunLoopSource({ _ in
+    BatteryService.shared.refresh()
+}, nil).takeRetainedValue()
+CFRunLoopAddSource(CFRunLoopGetMain(), src, .defaultMode)</code></pre>
+
+  <p>Read <code>kIOPSCurrentCapacityKey</code> over <code>kIOPSMaxCapacityKey</code> —
+  the current capacity is not already a percentage on every Mac. Suppress the first
+  callback, or the app announces "on battery" the moment it launches.</p>
+
+  <h3>CPU, memory and disk</h3>
+  <p>CPU load is cumulative tick counters, so a percentage requires remembering the
+  previous sample and dividing the deltas:</p>
+
+<pre><code>var info = host_cpu_load_info()
+var count = mach_msg_type_number_t(
+    MemoryLayout&lt;host_cpu_load_info&gt;.size / MemoryLayout&lt;integer_t&gt;.size)
+withUnsafeMutablePointer(to: &amp;info) {
+    $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+        host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &amp;count)
+    }
+}
+let busy = user + sys + nice, total = busy + idle
+if let l = lastTicks, total &gt; l.total { cpu = (busy - l.busy) / (total - l.total) }</code></pre>
+
+  <p>Memory uses <code>host_statistics64</code> with <code>HOST_VM_INFO64</code>, counting
+  active + wired + compressed pages against
+  <code>ProcessInfo.processInfo.physicalMemory</code>. Free disk space comes from
+  <code>volumeAvailableCapacityForImportantUsage</code>, which reports what is genuinely
+  reclaimable rather than the raw figure.</p>
+
+  <h3>Clipboard history that respects passwords</h3>
+  <p>Poll <code>NSPasteboard.general.changeCount</code> and act only when it moves. Before
+  recording anything, check the pasteboard's declared types — password managers mark their
+  content concealed, and honouring that is not optional:</p>
+
+<pre><code>let types = (pb.types ?? []).map(\.rawValue)
+if types.contains(where: {
+    $0.contains("ConcealedType") ||
+    $0.contains("TransientType") ||
+    $0.contains("AutoGeneratedType")
+}) { return }</code></pre>
+
+  <p>History is capped at 200 entries and held in memory only, so quitting the app
+  discards it.</p>
+
+  <h3>Teleprompter voice following</h3>
+  <p><code>SFSpeechRecognizer</code> with <code>requiresOnDeviceRecognition</code> set
+  when supported, fed from an <code>AVAudioEngine</code> input tap. Position is found by
+  matching the last two recognised words against the next 18 words of the script and
+  jumping just past them; a single distinctive word of four or more letters is accepted as
+  a weaker match within the next 6.</p>
+
+  <div class="key"><b>Recognition sessions expire.</b> They end on their own after about a
+  minute. Detect <code>isFinal</code> or an error and start a fresh session immediately,
+  or the prompter stops following mid-sentence. Fall back to clock-based scrolling if
+  permission is refused.</div>
+
+  <h3>Reading AI coding session logs</h3>
+  <p>Claude Code writes JSONL transcripts under <code>~/.claude/projects</code>; Codex
+  writes them under <code>~/.codex/sessions</code>. The app reads only the last 96 KB of
+  each file modified in the past six hours, walking backwards until it has a project path
+  and a last message.</p>
+
+<pre><code>guard let h = try? FileHandle(forReadingFrom: url) else { return [] }
+let size = (try? h.seekToEnd()) ?? 0
+try? h.seek(toOffset: size &gt; bytes ? size - bytes : 0)
+let data = (try? h.readToEnd()) ?? Data()</code></pre>
+
+  <p>State is inferred from the last entry and its age: a trailing
+  <code>tool_use</code> older than 6 s means a tool is running or awaiting approval; an
+  assistant message under 30 minutes old means it is waiting on the person; anything older
+  is idle.</p>
+</section>
+
+<!-- ============================ FEATURES ============================ -->
+<section>
+  <h2>7 · Feature specifications</h2>
+  <p class="lede">Enough detail per feature to implement it without seeing the code.</p>
+
+  <h3>Playing</h3>
+  <ul>
+    <li>44 × 44 pt artwork, 9 pt corner radius. Title 13 pt semibold, artist 12 pt at 55%
+      white. Falls back to the player's name when there is no artist.</li>
+    <li>Five-bar waveform, animated only while playing, driven by
+      <code>sin(t · (3.1 + i · 0.9) + i · 1.7)</code> per bar.</li>
+    <li>Scrubber shows elapsed on the left and <em>remaining</em> on the right, prefixed
+      with a minus. The track thickens from 4 to 7 pt while dragging; the seek is sent on
+      release.</li>
+    <li>Transport centred, with lyrics toggle far left and "open player" far right.</li>
+    <li>Lyrics are off by default. When on, the title and artist are sent to
+      <code>lrclib.net</code>; timed lyrics are parsed from LRC and the current line is
+      shown.</li>
+    <li>Apps can be excluded by bundle ID or name through a comma-separated setting.</li>
+  </ul>
+
+  <h3>Today</h3>
+  <ul>
+    <li><code>EKEventStore</code> with <code>requestFullAccessToEvents</code>. Events from
+      an hour ago to end of tomorrow, capped at 8, each with its calendar's colour.</li>
+    <li>Access is requested from a button inside the tab, never at launch.</li>
+    <li>Weather from <code>open-meteo.com</code>, which needs no account: geocode the city
+      name, then fetch current temperature, weather code, and the day's high and low.
+      Fahrenheit when the locale's measurement system is US. Cached 15 minutes.</li>
+  </ul>
+
+  <h3>Tray</h3>
+  <ul>
+    <li>Paths persist in <code>UserDefaults</code>; missing files are dropped at launch.</li>
+    <li>Dropping on the collapsed notch opens the panel on this tab automatically.</li>
+    <li>Items are draggable back out via <code>onDrag</code>.</li>
+    <li>Context menu: Open, Quick Look (<code>qlmanage -p</code>), Show in Finder,
+      AirDrop (<code>NSSharingService(named: .sendViaAirDrop)</code>), Share, Copy Path,
+      zip or unzip (<code>ditto</code>), Remove, Move to Trash.</li>
+    <li>Clicking the × removes from the tray; Option-clicking it trashes the file.</li>
+  </ul>
+
+  <h3>Clips</h3>
+  <ul>
+    <li>Text and images, newest first, 200 maximum, memory only.</li>
+    <li>Clicking copies back and moves the entry to the top without creating a duplicate.</li>
+    <li>Recording can be paused from the tab.</li>
+  </ul>
+
+  <h3>Timer</h3>
+  <ul>
+    <li>Presets at 5, 10, 15 and 30 minutes, plus a stepper from 1 to 600.</li>
+    <li>Pomodoro alternates focus and break, counting completed cycles, announcing each
+      change through the collapsed notch.</li>
+    <li>The ring is a trimmed <code>Circle</code>; the remaining time renders in a rounded
+      monospaced-digit face so it does not jitter.</li>
+    <li>While a timer runs, the collapsed notch shows the countdown.</li>
+  </ul>
+
+  <h3>Mirror</h3>
+  <ul>
+    <li><code>AVCaptureVideoPreviewLayer</code> as the backing layer of an
+      <code>NSView</code>, <code>videoGravity = .resizeAspectFill</code>.</li>
+    <li>Mirrored horizontally via the connection's <code>isVideoMirrored</code>, after
+      clearing <code>automaticallyAdjustsVideoMirroring</code>.</li>
+    <li>The session starts on a background queue — starting it on the main thread stalls
+      the UI for several hundred milliseconds — and stops in
+      <code>dismantleNSView</code>.</li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li>Four rows: battery, CPU, memory, free storage. Battery green, or red at 15% or
+      below; CPU blue; memory purple.</li>
+    <li>Bars have a 2% minimum width so a zero reading still reads as a bar.</li>
+    <li>Values animate with a 0.4 s ease so they glide rather than jump.</li>
+  </ul>
+
+  <h3>Prompt</h3>
+  <ul>
+    <li>Script persists in <code>UserDefaults</code>. Six words per line; spoken words
+      dim to 30% white.</li>
+    <li>Clock mode ticks at <code>60 / wpm</code> seconds per word, 60–260 wpm.</li>
+    <li>Voice mode falls back to clock mode on any permission or availability failure,
+      and says so in the tab.</li>
+  </ul>
+
+  <h3>Agents</h3>
+  <ul>
+    <li>Read-only. Up to 14 sessions, newest first, from the past six hours.</li>
+    <li>Status dot: green working, yellow tool running, orange waiting, grey idle.</li>
+    <li>Rescans every 4 s while visible.</li>
+  </ul>
+</section>
+
+<!-- ============================ DESIGN ============================ -->
+<section>
+  <h2>8 · Design system</h2>
+  <p class="lede">The numbers that make it look like part of macOS rather than a window
+  that happens to be near the notch.</p>
+
+  <h3>Geometry</h3>
+  <table>
+    <tr><th>Token</th><th style="width:22%">Value</th><th>Note</th></tr>
+    <tr><td>Panel width</td><td class="k">400 pt</td><td>About 27% of a 13-inch Air's width</td></tr>
+    <tr><td>Panel height</td><td class="k">212 pt</td><td>notch 32 + tab row 30 + body 150</td></tr>
+    <tr><td>Alert height</td><td class="k">28 pt</td><td>Added below the notch, at notch width</td></tr>
+    <tr><td>Corner radius, open</td><td class="k">30 pt bottom · 9 pt top</td><td>Top radius flares outward</td></tr>
+    <tr><td>Corner radius, closed</td><td class="k">9 pt bottom · 0 top</td><td>Matches the housing</td></tr>
+    <tr><td>Card radius</td><td class="k">16 pt</td><td>Inner panels and the AirDrop zone</td></tr>
+    <tr><td>Row radius</td><td class="k">10 pt</td><td>List rows</td></tr>
+    <tr><td>Body padding</td><td class="k">18 pt sides · 8 top · 16 bottom</td><td></td></tr>
+  </table>
+
+  <h3>Type</h3>
+  <table>
+    <tr><th>Role</th><th style="width:30%">Size / weight</th><th>Colour</th></tr>
+    <tr><td>Title</td><td class="k">13 pt semibold</td><td>White</td></tr>
+    <tr><td>Body</td><td class="k">12 pt regular</td><td>White 75%</td></tr>
+    <tr><td>Secondary</td><td class="k">12 pt regular</td><td>White 45–55%</td></tr>
+    <tr><td>Caption</td><td class="k">10 pt regular</td><td>White 40–45%</td></tr>
+    <tr><td>Section label</td><td class="k">11 pt semibold</td><td>White 50%</td></tr>
+    <tr><td>Numbers</td><td class="k">monospacedDigit</td><td>Anything that counts</td></tr>
+    <tr><td>Timer</td><td class="k">20 pt semibold rounded</td><td>White</td></tr>
+  </table>
+
+  <h3>Surfaces</h3>
+  <ul>
+    <li>Panel background pure black, or <code>.ultraThinMaterial</code> under 35% black in
+      glass mode.</li>
+    <li>Cards and rows white at 6–7%; hover states step to 10–14%.</li>
+    <li>Selected tab pill: white at 14%, with the label revealed.</li>
+    <li>Dividers white at 10%.</li>
+    <li>The whole tree is forced to <code>.colorScheme(.dark)</code> — the panel is always
+      black, so it must not follow the system appearance.</li>
+  </ul>
+
+  <h3>Motion</h3>
+  <table>
+    <tr><td class="k" style="width:40%">spring(0.38, damping 0.8)</td><td>Open and close</td></tr>
+    <tr><td class="k">spring(0.34, damping 0.78)</td><td>Alert appearing and leaving</td></tr>
+    <tr><td class="k">snappy(0.22)</td><td>Switching tabs</td></tr>
+    <tr><td class="k">easeInOut(0.25)</td><td>Lyric line changes</td></tr>
+    <tr><td class="k">easeOut(0.4)</td><td>System gauge values</td></tr>
+  </table>
+  <p>The open transition is opacity combined with a 0.92 scale anchored to the top, so the
+  panel appears to unfold out of the notch rather than fade in over it.</p>
+
+  <div class="key"><b>The single most Apple-like detail</b> is the empty row level with the
+  camera housing. The panel reserves the notch's height at the top and draws nothing
+  there. Without it the content starts too high and the panel reads as a window stuck
+  under the notch instead of the notch itself expanding.</div>
+</section>
+
+<!-- ============================ BUILD ============================ -->
+<section>
+  <h2>9 · Build and packaging</h2>
+
+  <h3>Package</h3>
+<pre><code>// swift-tools-version:5.9
+import PackageDescription
+
+let package = Package(
+    name: "Topside",
+    platforms: [.macOS(.v14)],
+    targets: [.executableTarget(name: "Topside", path: "Sources/Topside")]
+)</code></pre>
+
+  <p>The entry point is a bare <code>@main enum</code> rather than
+  <code>@main struct App: SwiftUI.App</code>, because the app owns raw
+  <code>NSPanel</code>s and must not have SwiftUI create a window:</p>
+
+<pre><code>@main
+enum Main {
+    static let delegate = AppDelegate()
+    static func main() {
+        let app = NSApplication.shared
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)   // no Dock icon, no menu bar
+        app.run()
+    }
+}</code></pre>
+
+  <h3>Bundling</h3>
+  <p>SwiftPM produces a bare executable. macOS will not grant camera, microphone, calendar
+  or automation access to one — those require a bundle with an <code>Info.plist</code>. So
+  the build script assembles the <code>.app</code> by hand:</p>
+
+<pre><code>swift build -c release
+BIN="$(swift build -c release --show-bin-path)/Topside"
+
+APP="Topside.app"
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN" "$APP/Contents/MacOS/Topside"
+cp Resources/Info.plist "$APP/Contents/Info.plist"
+
+# Sign with a real identity when one exists, so macOS remembers
+# granted permissions between builds.
+ID="$(security find-identity -v -p codesigning \
+      | awk '/Apple Development|Developer ID Application/ {print $2; exit}')"
+codesign --force --sign "${ID:--}" "$APP"</code></pre>
+
+  <div class="note"><b>Sign with a stable identity.</b> An ad-hoc signature
+  (<code>-</code>) produces a different code identity on every build, so macOS treats each
+  rebuild as a new app and forgets every permission. With a real Apple Development
+  certificate, permissions granted once survive rebuilds — worth setting up before the
+  first camera or calendar prompt.</div>
+
+  <h3>Info.plist</h3>
+  <table>
+    <tr><td class="k" style="width:44%">LSUIElement</td><td><code>true</code> — no Dock icon</td></tr>
+    <tr><td class="k">NSCameraUsageDescription</td><td>Mirror</td></tr>
+    <tr><td class="k">NSMicrophoneUsageDescription</td><td>Teleprompter voice following</td></tr>
+    <tr><td class="k">NSSpeechRecognitionUsageDescription</td><td>Teleprompter voice following</td></tr>
+    <tr><td class="k">NSCalendarsFullAccessUsageDescription</td><td>Today</td></tr>
+    <tr><td class="k">NSAppleEventsUsageDescription</td><td>Media control and artwork</td></tr>
+    <tr><td class="k">NSDownloadsFolderUsageDescription</td><td>Download progress</td></tr>
+  </table>
+  <p>Every string must be present before the feature first runs. A missing usage
+  description does not warn — the app is killed the moment it touches that facility.</p>
+</section>
+
+<!-- ============================ SCRIPTING ============================ -->
+<section>
+  <h3>10 · Scripting interface</h3>
+  <p>The app observes a distributed notification, which makes it driveable from scripts
+  and, usefully, lets an automated test open a given tab and screenshot it without
+  touching the pointer.</p>
+
+<pre><code>DistributedNotificationCenter.default().addObserver(
+    forName: Notification.Name("local.topside.control"),
+    object: nil, queue: .main) { note in
+        guard let cmd = note.object as? String else { return }
+        // "open" · "open:&lt;tab&gt;" · "close" · "settings"
+        // "shelf:&lt;path&gt;" · "timer:&lt;seconds&gt;" · "stoptimer" · "toast:&lt;text&gt;"
+}</code></pre>
+
+<pre><code>./topside-ctl open:timer
+./topside-ctl "toast:Build finished"
+./topside-ctl timer:300</code></pre>
+
+  <div class="key"><b>This is how every screenshot in this document was taken.</b> A short
+  Swift program puts a plain backdrop window above the menu bar but below the panel, then
+  drives the app tab by tab with <code>topside-ctl</code> and calls
+  <code>screencapture -x -R</code> on a fixed rectangle. Building that rig takes ten
+  minutes and makes visual verification repeatable.</div>
+</section>
+
+<!-- ============================ HISTORY ============================ -->
+<section class="page-break">
+  <h2>11 · How it evolved</h2>
+  <p class="lede">Three versions, each driven by something visibly wrong with the one
+  before. Worth reading before designing your own: these are the mistakes that are easy to
+  repeat.</p>
+
+  <h3>Phase 1 — everything, large <span class="pill cut">discarded</span></h3>
+  <figure class="framed">
+    <img src="img/phase1-open.png" alt="The first version: a 700 pt panel with an icon-only tab row">
+    <figcaption><b>700 pt wide, eleven tabs, calendar permanently in a sidebar.</b> The
+    tab row was icons only, so nothing was identifiable without hovering for a
+    tooltip.</figcaption>
+  </figure>
+
+  <figure class="framed">
+    <img src="img/phase1-closed.png" alt="The collapsed notch with content in wings either side">
+    <figcaption><b>Collapsed, with "wings".</b> Album art, waveforms, timers and volume
+    levels were drawn in panels either side of the camera housing — the obvious imitation
+    of the iPhone's Dynamic Island.</figcaption>
+  </figure>
+
+  <p>What was wrong: on a 13-inch screen a 700 pt panel covers nearly half the width, and
+  the wings made the app permanently visible in the menu bar whether or not it had
+  anything to say.</p>
+
+  <h3>Phase 2 — smaller, labelled <span class="pill cut">discarded</span></h3>
+  <figure class="framed">
+    <img src="img/phase2-open.png" alt="The second version: a 560 pt panel with a labelled tab row">
+    <figcaption><b>560 pt wide, every option named.</b> The icon-only row became icons
+    with labels, so the whole app was legible at a glance.</figcaption>
+  </figure>
+
+  <figure class="framed">
+    <img src="img/phase2-bleed.png" alt="The collapsed notch spilling content into the menu bar">
+    <figcaption><b>Still bleeding.</b> The wings survived into phase 2 and this is what
+    they looked like in daily use: a music icon on one side, a waveform and status icons
+    on the other, competing with the real menu bar.</figcaption>
+  </figure>
+
+  <p>Two problems. The wings still spilled into the menu bar. And the labelled row, at
+  eleven tabs across 560 pt, left each option 50 pt of space — cramped, and nothing like
+  a native control.</p>
+
+  <h3>Phase 3 — the notch, and nothing else <span class="pill ok">shipped</span></h3>
+  <figure>
+    <img src="img/shot-home.png" alt="The final version">
+    <figcaption><b>400 pt, nine options, no wings.</b> Collapsed, the app is exactly the
+    camera housing. The tab row became a single row of icons where only the selected one
+    carries a label, as a pill.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th>Change</th><th>Reason</th></tr>
+    <tr><td>Wings removed entirely</td><td>Nothing should sit in the menu bar; alerts drop downward instead</td></tr>
+    <tr><td>Panel 560 → 400 pt</td><td>Fits a 13-inch screen without dominating it</td></tr>
+    <tr><td>Labels → selected-only pill</td><td>Nine options fit comfortably; matches native segmented controls</td></tr>
+    <tr><td>Volume and brightness dropped</td><td>macOS already draws those; duplicating them is noise</td></tr>
+    <tr><td>Apps, Shell, Notes, Bluetooth dropped</td><td>A launcher, a terminal and a notepad all exist already and were better elsewhere</td></tr>
+    <tr><td>Calendar moved to its own tab</td><td>It no longer fit beside the player at 400 pt</td></tr>
+    <tr><td>Corner radius 26 → 30 pt, top flare added</td><td>Reads as the notch expanding rather than a window appearing</td></tr>
+  </table>
+
+  <div class="key"><b>The lesson worth carrying over.</b> Every removal improved the app.
+  The first version implemented almost everything a notch app could do; the shipped
+  version does nine things and looks like it belongs to the operating system. Start at
+  phase 3.</div>
+</section>
+
+<!-- ============================ GOTCHAS ============================ -->
+<section>
+  <h2>12 · Traps and gotchas</h2>
+  <p class="lede">Each of these cost real time. In rough order of how much.</p>
+
+  <h3>1 · Resizing the window from a published side effect</h3>
+  <p>Covered in §5. The symptom is maddening: the window resizes correctly, logs confirm
+  it, and the contents still render collapsed. Drive the frame from an explicit callback
+  at the transition instead.</p>
+
+  <h3>2 · The Swift type-checker hangs on compact maths</h3>
+  <p>This one line failed the build with <i>"unable to type-check this expression in
+  reasonable time"</i>:</p>
+<pre><code>let h = playing ? 4 + 10 * abs(sin(t * (3.1 + Double(i) * 0.9) + Double(i) * 1.7)) : 4</code></pre>
+  <p>Mixed literals, <code>Double</code> and <code>CGFloat</code> in a ternary give the
+  solver too much to explore. Hoist it into a function with explicit types:</p>
+<pre><code>static func barHeight(_ i: Int, _ t: Double, _ playing: Bool) -&gt; CGFloat {
+    guard playing else { return 3 }
+    let speed: Double = 3.1 + Double(i) * 0.9
+    let phase: Double = Double(i) * 1.7
+    return CGFloat(3.0 + 11.0 * abs(sin(t * speed + phase)))
+}</code></pre>
+  <p>In a SwiftUI body, annotate intermediate values rather than writing one dense
+  expression. The compiler is the constraint, not the reader.</p>
+
+  <h3>3 · Timers that stop in the wrong run-loop mode</h3>
+  <p>A <code>Timer.scheduledTimer</code> stops firing while a menu is open or a window is
+  being dragged. For anything driving UI responsiveness, add it explicitly:
+  <code>RunLoop.main.add(timer, forMode: .common)</code>.</p>
+
+  <h3>4 · Keyboard focus held by a collapsed panel</h3>
+  <p>If a text field inside the panel has focus when it closes, the panel keeps
+  first-responder status and swallows the person's next keystrokes. On close, clear the
+  responder and cycle the window:</p>
+<pre><code>if panel.isKeyWindow {
+    panel.makeFirstResponder(nil)
+    panel.orderOut(nil)
+}
+panel.setFrame(closedFrame, display: true)
+panel.orderFrontRegardless()</code></pre>
+
+  <h3>5 · Ad-hoc signing resets every permission</h3>
+  <p>See §9. Sign with a real Apple Development certificate before the first permission
+  prompt, or re-grant camera, calendar and automation access after every single build.</p>
+
+  <h3>6 · Assuming the Now Playing feed carries artwork</h3>
+  <p>It usually does not — only an identifier. Build the fallback chain in §6 from the
+  start rather than discovering it after the UI is finished.</p>
+
+  <h3>7 · Announcing state on the first poll</h3>
+  <p>Battery, Bluetooth and download watchers all fire a callback immediately at launch.
+  Without a <code>first</code> flag the app greets the person with "on battery 62%" every
+  time it starts. Suppress the first sample everywhere.</p>
+
+  <h3>8 · Window shadow traced from the wrong shape</h3>
+  <p>AppKit's window shadow follows the window rectangle, not the clipped notch outline,
+  producing a visible box around the panel. Set <code>hasShadow = false</code> and draw
+  the shadow in SwiftUI on the clipped shape.</p>
+
+  <h3>9 · Reading whole log files</h3>
+  <p>Agent transcripts reach tens of megabytes. Seek to the last 96 KB with a
+  <code>FileHandle</code>, and bound the directory walk by depth and modification time, or
+  the scan takes seconds and burns CPU every few seconds.</p>
+
+  <h3>10 · Starting a capture session on the main thread</h3>
+  <p><code>AVCaptureSession.startRunning()</code> blocks for several hundred milliseconds.
+  Start and stop it on a private queue, and stop it in
+  <code>dismantleNSView</code> — otherwise the camera light stays on after the tab is
+  closed.</p>
+
+  <h3>11 · Trusting <code>client.bundleIdentifier</code></h3>
+  <p>For browsers it names a media helper process, not the browser. Prefer
+  <code>parentApplicationBundleIdentifier</code> when present.</p>
+
+  <h3>12 · Forgetting the notch's own height in the layout</h3>
+  <p>The open panel must reserve <code>notchSize.height</code> of empty space at the top.
+  Omitting it puts content behind the camera housing, where it cannot be seen.</p>
+</section>
+
+<!-- ============================ PERMISSIONS ============================ -->
+<section>
+  <h3>13 · Permissions and privacy</h3>
+  <table>
+    <tr><th>Facility</th><th style="width:24%">Asked when</th><th>If refused</th></tr>
+    <tr><td>Calendar</td><td>Today tab, button</td><td>Tab shows the button again</td></tr>
+    <tr><td>Camera</td><td>Mirror tab opened</td><td>Explains where to turn it on</td></tr>
+    <tr><td>Microphone + Speech</td><td>Voice follow started</td><td>Falls back to clock scrolling</td></tr>
+    <tr><td>Automation (Music)</td><td>First artwork lookup</td><td>Covers fall back to the app icon</td></tr>
+    <tr><td>Accessibility</td><td>Not used in the shipped build</td><td>—</td></tr>
+  </table>
+
+  <p>Three principles the app holds to, worth carrying into any reproduction:</p>
+  <ul>
+    <li><b>Nothing is requested at launch.</b> Every prompt is triggered by the person
+      opening the feature that needs it.</li>
+    <li><b>Network access is opt-in and minimal.</b> Weather sends a city name; lyrics send
+      a title and artist. Both are off by default and there is no other traffic.</li>
+    <li><b>Sensitive data stays in memory.</b> Clipboard history is never written to disk
+      and concealed pasteboard content is skipped entirely.</li>
+  </ul>
+</section>
+
+<!-- ============================ THE PROMPT ============================ -->
+<section class="page-break">
+  <h2>14 · The reproduction prompt</h2>
+  <p class="lede">Paste this alongside the document. It is written to produce the shipped
+  design directly, skipping the two discarded phases.</p>
+
+  <div class="prompt">Build a macOS notch app in Swift, as a SwiftPM executable package with no third-party
+dependencies, targeting macOS 14 or later. AppKit owns the window; SwiftUI draws the
+contents. Follow the attached build guide for geometry, techniques and design values.
+
+CORE BEHAVIOUR
+- A borderless, non-activating NSPanel per notched display, at window level
+  mainMenu + 3, with collectionBehavior [.canJoinAllSpaces, .stationary,
+  .fullScreenAuxiliary, .ignoresCycle], clear background and hasShadow = false.
+- Collapsed, the visible panel is exactly the camera housing: measure it from
+  NSScreen.safeAreaInsets.top and the auxiliaryTopLeftArea / auxiliaryTopRightArea
+  widths. Nothing may be drawn beside it in the menu bar.
+- Resting the pointer on the notch for 0.15 s opens a 400 x 212 pt panel that drops
+  downward. It closes 0.35 s after the pointer leaves, unless pinned. Detect this by
+  polling NSEvent.mouseLocation at 15 Hz from a timer added in RunLoop .common mode.
+- Resize the window from an explicit callback invoked by open() and close(), NOT from
+  a Combine subscription on the @Published property. Grow the window before setting
+  isOpen = true; set isOpen = false before shrinking it.
+- Draw the panel with a custom Shape whose top corners flare outward into the menu bar
+  and whose bottom corners are rounded. Animate both radii.
+- Reserve the notch's height as empty space at the top of the open panel.
+- Short alerts drop down below the notch at notch width, never sideways.
+
+TABS — one row of icons under the notch; only the selected one shows a label, as a pill
+1. Playing   system-wide Now Playing: artwork, title, artist, waveform, draggable
+             scrubber with remaining time, transport, optional lyrics
+2. Today     calendar events for today and tomorrow, plus current weather
+3. Tray      file shelf fed by dragging onto the notch; AirDrop, zip, Quick Look, share
+4. Clips     searchable clipboard history, in memory only, skipping concealed content
+5. Timer     countdown presets, custom length, and a Pomodoro cycle
+6. Mirror    mirrored camera preview
+7. System    battery, CPU, memory, free storage as animated bars
+8. Prompt    teleprompter, clock-scrolled or following the speaker's voice
+9. Agents    read-only status of local Claude Code and Codex sessions
+
+DO NOT BUILD
+- No volume or brightness overlays. macOS already draws those.
+- No app launcher, terminal or notes tab.
+- Nothing that occupies the menu bar while collapsed.
+
+CONSTRAINTS
+- Request no permission at launch. Each is triggered by opening the feature.
+- Network access only for weather and lyrics, both off by default.
+- Ship a build script that assembles a signed .app bundle with an Info.plist, signing
+  with a real Apple Development identity when one is available.
+- Expose a distributed-notification control channel so the app can be driven from
+  scripts, and use it to screenshot each tab for verification.
+
+Verify visually before reporting done: drive the pointer onto the notch programmatically,
+confirm the panel opens, and screenshot every tab.</div>
+</section>
+
+<!-- ============================ MANIFEST ============================ -->
+<section>
+  <h2>15 · File manifest</h2>
+
+<pre><code>Topside/
+├── Package.swift              SwiftPM manifest, macOS 14+, one executable target
+├── README.md
+├── build.sh                   Builds, bundles and signs Topside.app; --run launches it
+├── topside-ctl                Sends control commands to the running app
+├── Resources/
+│   └── Info.plist             LSUIElement + every usage description
+└── Sources/Topside/
+    ├── App.swift              Entry point · NotchPanel · NotchController · AppDelegate
+    ├── Core.swift             Prefs · Tab · NotchModel · shared views · NotchShape
+    ├── NotchViews.swift       Root · collapsed · open · tab row · waveform
+    ├── MediaService.swift     Now Playing · transport · artwork chain · lyrics
+    ├── SystemServices.swift   Battery · downloads · CPU / memory / disk
+    ├── DataServices.swift     Calendar · weather · tray · clipboard · timers
+    ├── Tools.swift            Teleprompter + speech · agent log reader
+    ├── TabsA.swift            Playing · Today · Tray · Clips
+    ├── TabsB.swift            Timer · Mirror · System · Prompt · Agents
+    └── SettingsView.swift     Settings form</code></pre>
+
+  <h3>Frameworks used</h3>
+  <p class="mono" style="font-size:9pt">AppKit · SwiftUI · Combine · AVFoundation ·
+  EventKit · Speech · IOKit.ps · ServiceManagement · UniformTypeIdentifiers</p>
+  <p>Plus <code>MediaRemote.framework</code>, reached indirectly through
+  <code>osascript</code> rather than linked.</p>
+
+  <h3>Where the complexity sits</h3>
+  <table>
+    <tr><th>Area</th><th style="width:20%">Difficulty</th><th>Note</th></tr>
+    <tr><td>Now Playing + artwork</td><td>High</td><td>Private API, no documentation, artwork needs a fallback chain</td></tr>
+    <tr><td>Notch window and hover</td><td>High</td><td>Geometry is obscure; the resize ordering is a genuine trap</td></tr>
+    <tr><td>Voice-following prompter</td><td>Medium</td><td>Session expiry handling is the only subtle part</td></tr>
+    <tr><td>Agent log parsing</td><td>Medium</td><td>Undocumented formats that may change</td></tr>
+    <tr><td>System stats</td><td>Medium</td><td>Mach APIs need careful pointer rebinding</td></tr>
+    <tr><td>Tray, clips, timers, today</td><td>Low</td><td>Ordinary SwiftUI over public frameworks</td></tr>
+  </table>
+
+  <div class="key"><b>If you build one thing from this document,</b> make it §5 and §6.
+  The nine tabs are replaceable; the notch window, the hover loop and the Now Playing
+  access are what make a notch app possible at all.</div>
+</section>
+
+</body>
+</html>

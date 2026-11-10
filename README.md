@@ -19,6 +19,21 @@ menu bar. Short alerts drop down beneath it.
 
 On a Mac without a notch, it draws a virtual one in the middle of the menu bar.
 
+## Documentation
+
+[`docs/Topside-Build-Guide.pdf`](docs/Topside-Build-Guide.pdf) is a 26-page reproduction
+guide: architecture, the platform techniques behind the notch window and Now Playing
+access, the design system, screenshots of every screen and of the two discarded designs,
+a list of the traps worth knowing, and a prompt for rebuilding the app from scratch.
+
+Regenerate it after editing `docs/guide.html`:
+
+```bash
+cd docs && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --disable-gpu --no-pdf-header-footer \
+  --print-to-pdf=Topside-Build-Guide.pdf "file://$PWD/guide.html"
+```
+
 ## Build
 
 Requires macOS 14 or later and the Swift toolchain (Xcode or the Command Line Tools).
