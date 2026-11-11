@@ -77,6 +77,19 @@ final class MediaService: ObservableObject {
     }
     """
 
+    private static let positionPlayers: Set<String> = [
+        "com.apple.Music", "com.apple.TV", "com.apple.iTunes", "com.spotify.client",
+    ]
+
+    /// Reads the player's own position, for the players whose elapsed time MediaRemote
+    /// reports as 0 until something changes the playback state.
+    private static let positionScript = """
+    tell application id "%@"
+        if player state is stopped then return "stopped"
+        return (player position as text) & "|" & (player state as text)
+    end tell
+    """
+
     private struct Info: Decodable {
         var title: String?
         var artist: String?
@@ -106,7 +119,19 @@ final class MediaService: ObservableObject {
         busy = true
         queue.async {
             let out = Shell.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", Self.infoScript]).out
-            let info = try? JSONDecoder().decode(Info.self, from: Data(out.utf8))
+            var info = try? JSONDecoder().decode(Info.self, from: Data(out.utf8))
+            // MediaRemote reports an elapsed time of 0 until something changes the playback
+            // state, which leaves the scrubber pinned at the start. Ask the player instead.
+            if let i = info, i.playing == true, (i.elapsed ?? 0) == 0,
+               let id = i.bid, Self.positionPlayers.contains(id) {
+                let script = String(format: Self.positionScript, id)
+                let field = Shell.run("/usr/bin/osascript", ["-e", script]).out
+                    .split(separator: "|").first.map(String.init) ?? ""
+                if let position = Double(field.trimmingCharacters(in: .whitespacesAndNewlines)), position > 0 {
+                    info?.elapsed = position
+                    info?.ts = nil  // True as of now, not as of MediaRemote's timestamp.
+                }
+            }
             onMain {
                 self.busy = false
                 self.apply(info)
@@ -146,27 +171,114 @@ final class MediaService: ObservableObject {
 
     // MARK: Controls
 
-    private func command(_ args: [String]) {
-        queue.async {
-            Shell.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", Self.commandScript] + args)
-            onMain { DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.poll() } }
+    /// MediaRemote is read-only for an app without Apple's private entitlements:
+    /// MRMediaRemoteSendCommand reports success and changes nothing, and
+    /// MRMediaRemoteSetElapsedTime behaves the same way. So a command goes to the player
+    /// itself where it can be scripted, and falls back to a system media key — which the
+    /// frontmost audio app handles, browsers included — and only then to MediaRemote.
+    private enum Command {
+        case playPause, next, previous
+        case seek(Double)
+
+        /// MRMediaRemoteCommand: 2 = toggle, 4 = next, 5 = previous.
+        var remote: [String] {
+            switch self {
+            case .playPause: return ["2"]
+            case .next: return ["4"]
+            case .previous: return ["5"]
+            case .seek(let s): return ["seek", String(s)]
+            }
         }
+
+        /// NX_KEYTYPE_PLAY / _NEXT / _PREVIOUS.
+        var mediaKey: Int32? {
+            switch self {
+            case .playPause: return 16
+            case .next: return 17
+            case .previous: return 18
+            case .seek: return nil
+            }
+        }
+    }
+
+    /// Players that take transport commands over Apple events, by bundle identifier.
+    /// Music, TV and Spotify share iTunes' vocabulary; VLC has its own.
+    private static func script(for command: Command, player id: String) -> String? {
+        let body: String
+        switch id {
+        case "com.apple.Music", "com.apple.TV", "com.apple.iTunes", "com.spotify.client":
+            switch command {
+            case .playPause: body = "playpause"
+            case .next: body = "next track"
+            case .previous: body = "previous track"
+            case .seek(let s): body = "set player position to \(Int(s.rounded()))"
+            }
+        case "org.videolan.vlc":
+            switch command {
+            case .playPause: body = "play"  // VLC's `play` toggles.
+            case .next: body = "next"
+            case .previous: body = "previous"
+            case .seek(let s): body = "set current time to \(Int(s.rounded()))"
+            }
+        case "com.apple.QuickTimePlayerX":
+            switch command {
+            case .playPause: body = "if playing of document 1 then pause document 1 else play document 1"
+            case .seek(let s): body = "set current time of document 1 to \(Int(s.rounded()))"
+            case .next, .previous: return nil
+            }
+        default:
+            return nil
+        }
+        return "tell application id \"\(id)\" to \(body)"
+    }
+
+    private func send(_ command: Command) {
+        let id = track?.bundleID ?? ""
+        queue.async {
+            var done = false
+            if let script = Self.script(for: command, player: id) {
+                done = Shell.run("/usr/bin/osascript", ["-e", script]).status == 0
+            }
+            if !done, let key = command.mediaKey {
+                done = Self.pressMediaKey(key)
+            }
+            if !done {
+                Shell.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", Self.commandScript] + command.remote)
+            }
+            onMain { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.poll() } }
+        }
+    }
+
+    /// Posts a media key to the system. Needs Accessibility access, so it is only ever a
+    /// fallback for players that cannot be scripted.
+    private static func pressMediaKey(_ key: Int32) -> Bool {
+        guard AXIsProcessTrusted() else { return false }
+        for down in [true, false] {
+            let flags = NSEvent.ModifierFlags(rawValue: UInt(down ? 0xa00 : 0xb00))
+            let data1 = Int((key << 16) | ((down ? 0xa : 0xb) << 8))
+            guard let event = NSEvent.otherEvent(with: .systemDefined, location: .zero,
+                                                 modifierFlags: flags, timestamp: 0, windowNumber: 0,
+                                                 context: nil, subtype: 8, data1: data1, data2: -1),
+                  let cg = event.cgEvent else { return false }
+            cg.post(tap: .cghidEventTap)
+        }
+        return true
     }
 
     func togglePlay() {
         isPlaying.toggle()
         if isPlaying { baseDate = Date() } else { elapsedBase = elapsed() }
-        command(["2"])
+        send(.playPause)
     }
 
-    func next() { command(["4"]) }
-    func previous() { command(["5"]) }
+    func next() { send(.next) }
+    func previous() { send(.previous) }
 
     func seek(to seconds: Double) {
         elapsedBase = seconds
         baseDate = Date()
         objectWillChange.send()
-        command(["seek", String(seconds)])
+        send(.seek(seconds))
     }
 
     func activatePlayer() {

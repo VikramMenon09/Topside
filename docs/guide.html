@@ -216,7 +216,7 @@
     <div><span class="n">15</span><span>File manifest</span></div>
   </div>
 
-  <h3>1 · How to use this document</h3>
+  <h2>1 · How to use this document</h2>
   <p>This is written to be handed to a capable coding AI, together with the single prompt
   in <b>§14</b>, to reproduce an app of the same shape. It is deliberately specific about
   the parts that are hard to guess: how a window sits over the notch, how the system's
@@ -414,9 +414,9 @@
   <h3>Source files</h3>
   <table>
     <tr><th>File</th><th style="width:12%">Lines</th><th>Holds</th></tr>
-    <tr><td class="k">App.swift</td><td>369</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
+    <tr><td class="k">App.swift</td><td>376</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
     <tr><td class="k">Core.swift</td><td>279</td><td>Prefs, Tab enum, NotchModel, shared UI pieces, the notch outline shape</td></tr>
-    <tr><td class="k">MediaService.swift</td><td>287</td><td>Now Playing, transport commands, artwork, lyrics</td></tr>
+    <tr><td class="k">MediaService.swift</td><td>399</td><td>Now Playing, three-tier transport, artwork, lyrics</td></tr>
     <tr><td class="k">SystemServices.swift</td><td>156</td><td>Battery, downloads, CPU/memory/disk</td></tr>
     <tr><td class="k">DataServices.swift</td><td>378</td><td>Calendar, weather, file tray, clipboard, timers</td></tr>
     <tr><td class="k">Tools.swift</td><td>266</td><td>Teleprompter with speech recognition, agent-log reader</td></tr>
@@ -639,14 +639,52 @@ const d = i.nowPlayingInfo;             // the metadata dictionary
 // …Duration, …ElapsedTime, …PlaybackRate, …Timestamp
 </code></pre>
 
-  <p>Transport commands go through a C function in the same framework. The integer is a
-  command code.</p>
+  <div class="key">
+    <b>MediaRemote is read-only.</b> The framework exports
+    <code>MRMediaRemoteSendCommand</code> and <code>MRMediaRemoteSetElapsedTime</code>, and
+    most write-ups online tell you to call them. On current macOS an app without Apple's
+    private entitlements gets <code>true</code> back from <code>SendCommand</code> and
+    <em>nothing happens</em> — no error, no effect. Verify before you build on it: send a
+    toggle, then read the player's state a second later. This was a real bug in Topside;
+    reading worked, so the controls looked wired up but did nothing.
+  </div>
 
-<pre><code>ObjC.bindFunction('MRMediaRemoteSendCommand', ['bool', ['int', 'id']]);
-$.MRMediaRemoteSendCommand(2, $());   // 0 play · 1 pause · 2 toggle
-                                      // 4 next · 5 previous
-ObjC.bindFunction('MRMediaRemoteSetElapsedTime', ['void', ['double']]);
-$.MRMediaRemoteSetElapsedTime(90.0);  // seek</code></pre>
+  <h4>Transport that actually works</h4>
+  <p>Three tiers, in order, stopping at the first that lands:</p>
+  <ol>
+    <li><b>Apple events to the player.</b> Music, TV, iTunes and Spotify all share iTunes'
+    vocabulary — <code>playpause</code>, <code>next track</code>,
+    <code>previous track</code>, <code>set player position to&nbsp;N</code>. VLC uses
+    <code>play</code> (which toggles), <code>next</code>, <code>previous</code> and
+    <code>set current time</code>. This covers nearly every real session and is the only
+    tier that reports failure honestly, through the exit status.</li>
+    <li><b>A system media key</b> for players that cannot be scripted, browsers included.
+    Post an <code>NSEvent</code> of type <code>.systemDefined</code>, subtype 8, with the
+    key in the high half of <code>data1</code>: 16 play/pause, 17 next, 18 previous. Needs
+    Accessibility access, so check <code>AXIsProcessTrusted()</code> first and skip the
+    tier when it is not granted.</li>
+    <li><b>MediaRemote</b> last, in case a future release restores it.</li>
+  </ol>
+
+<pre><code>// Tier 1 — the player itself.
+osascript -e 'tell application id "com.apple.Music" to playpause'
+
+// Tier 2 — a media key, if Accessibility is granted.
+let data1 = Int((key &lt;&lt; 16) | ((down ? 0xa : 0xb) &lt;&lt; 8))
+NSEvent.otherEvent(with: .systemDefined, location: .zero,
+                   modifierFlags: .init(rawValue: down ? 0xa00 : 0xb00),
+                   timestamp: 0, windowNumber: 0, context: nil,
+                   subtype: 8, data1: data1, data2: -1)?
+    .cgEvent?.post(tap: .cghidEventTap)</code></pre>
+
+  <div class="key">
+    <b>Elapsed time can read as zero.</b> MediaRemote reports
+    <code>ElapsedTime&nbsp;=&nbsp;0</code> for a session it did not see start, until
+    something changes the playback state — so the scrubber sits pinned at the beginning
+    through a whole track. When the feed says playing with an elapsed time of zero and the
+    player is scriptable, ask it for <code>player position</code> instead and treat that
+    value as true <em>now</em> rather than at the feed's timestamp.
+  </div>
 
   <div class="key">
     <b>Identify the real player.</b> <code>playerPath.client.bundleIdentifier</code> is
@@ -1012,7 +1050,7 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
 
 <!-- ============================ SCRIPTING ============================ -->
 <section>
-  <h3>10 · Scripting interface</h3>
+  <h2>10 · Scripting interface</h2>
   <p>The app observes a distributed notification, which makes it driveable from scripts
   and, usefully, lets an automated test open a given tab and screenshot it without
   touching the pointer.</p>
@@ -1023,6 +1061,7 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
         guard let cmd = note.object as? String else { return }
         // "open" · "open:&lt;tab&gt;" · "close" · "settings"
         // "shelf:&lt;path&gt;" · "timer:&lt;seconds&gt;" · "stoptimer" · "toast:&lt;text&gt;"
+        // "media:play" · "media:next" · "media:previous"
 }</code></pre>
 
 <pre><code>./topside-ctl open:timer
@@ -1115,7 +1154,18 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
   it, and the contents still render collapsed. Drive the frame from an explicit callback
   at the transition instead.</p>
 
-  <h3>2 · The Swift type-checker hangs on compact maths</h3>
+  <h3>2 · A private API that succeeds and does nothing</h3>
+  <p>Covered in §6. <code>MRMediaRemoteSendCommand</code> returns <code>true</code> from an
+  unentitled app on current macOS and has no effect, so play, pause and skip were dead
+  while reading the same framework worked perfectly — which made the controls look
+  correct. <code>MRMediaRemoteSetElapsedTime</code> fails the same silent way, so seeking
+  was dead too.</p>
+  <p>The general lesson is worth more than the specific one: a private API's return value
+  is not a contract. When you call one, verify the <em>effect</em> — send the command,
+  then read the state back from somewhere independent a moment later. Had this been
+  checked once at the start, it would not have shipped.</p>
+
+  <h3>3 · The Swift type-checker hangs on compact maths</h3>
   <p>This one line failed the build with <i>"unable to type-check this expression in
   reasonable time"</i>:</p>
 <pre><code>let h = playing ? 4 + 10 * abs(sin(t * (3.1 + Double(i) * 0.9) + Double(i) * 1.7)) : 4</code></pre>
@@ -1130,12 +1180,12 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
   <p>In a SwiftUI body, annotate intermediate values rather than writing one dense
   expression. The compiler is the constraint, not the reader.</p>
 
-  <h3>3 · Timers that stop in the wrong run-loop mode</h3>
+  <h3>4 · Timers that stop in the wrong run-loop mode</h3>
   <p>A <code>Timer.scheduledTimer</code> stops firing while a menu is open or a window is
   being dragged. For anything driving UI responsiveness, add it explicitly:
   <code>RunLoop.main.add(timer, forMode: .common)</code>.</p>
 
-  <h3>4 · Keyboard focus held by a collapsed panel</h3>
+  <h3>5 · Keyboard focus held by a collapsed panel</h3>
   <p>If a text field inside the panel has focus when it closes, the panel keeps
   first-responder status and swallows the person's next keystrokes. On close, clear the
   responder and cycle the window:</p>
@@ -1146,54 +1196,54 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
 panel.setFrame(closedFrame, display: true)
 panel.orderFrontRegardless()</code></pre>
 
-  <h3>5 · Ad-hoc signing resets every permission</h3>
+  <h3>6 · Ad-hoc signing resets every permission</h3>
   <p>See §9. Sign with a real Apple Development certificate before the first permission
   prompt, or re-grant camera, calendar and automation access after every single build.</p>
 
-  <h3>6 · Assuming the Now Playing feed carries artwork</h3>
+  <h3>7 · Assuming the Now Playing feed carries artwork</h3>
   <p>It usually does not — only an identifier. Build the fallback chain in §6 from the
   start rather than discovering it after the UI is finished.</p>
 
-  <h3>7 · Announcing state on the first poll</h3>
+  <h3>8 · Announcing state on the first poll</h3>
   <p>Battery, Bluetooth and download watchers all fire a callback immediately at launch.
   Without a <code>first</code> flag the app greets the person with "on battery 62%" every
   time it starts. Suppress the first sample everywhere.</p>
 
-  <h3>8 · Window shadow traced from the wrong shape</h3>
+  <h3>9 · Window shadow traced from the wrong shape</h3>
   <p>AppKit's window shadow follows the window rectangle, not the clipped notch outline,
   producing a visible box around the panel. Set <code>hasShadow = false</code> and draw
   the shadow in SwiftUI on the clipped shape.</p>
 
-  <h3>9 · Reading whole log files</h3>
+  <h3>10 · Reading whole log files</h3>
   <p>Agent transcripts reach tens of megabytes. Seek to the last 96 KB with a
   <code>FileHandle</code>, and bound the directory walk by depth and modification time, or
   the scan takes seconds and burns CPU every few seconds.</p>
 
-  <h3>10 · Starting a capture session on the main thread</h3>
+  <h3>11 · Starting a capture session on the main thread</h3>
   <p><code>AVCaptureSession.startRunning()</code> blocks for several hundred milliseconds.
   Start and stop it on a private queue, and stop it in
   <code>dismantleNSView</code> — otherwise the camera light stays on after the tab is
   closed.</p>
 
-  <h3>11 · Trusting <code>client.bundleIdentifier</code></h3>
+  <h3>12 · Trusting <code>client.bundleIdentifier</code></h3>
   <p>For browsers it names a media helper process, not the browser. Prefer
   <code>parentApplicationBundleIdentifier</code> when present.</p>
 
-  <h3>12 · Forgetting the notch's own height in the layout</h3>
+  <h3>13 · Forgetting the notch's own height in the layout</h3>
   <p>The open panel must reserve <code>notchSize.height</code> of empty space at the top.
   Omitting it puts content behind the camera housing, where it cannot be seen.</p>
 </section>
 
 <!-- ============================ PERMISSIONS ============================ -->
 <section>
-  <h3>13 · Permissions and privacy</h3>
+  <h2>13 · Permissions and privacy</h2>
   <table>
     <tr><th>Facility</th><th style="width:24%">Asked when</th><th>If refused</th></tr>
     <tr><td>Calendar</td><td>Today tab, button</td><td>Tab shows the button again</td></tr>
     <tr><td>Camera</td><td>Mirror tab opened</td><td>Explains where to turn it on</td></tr>
     <tr><td>Microphone + Speech</td><td>Voice follow started</td><td>Falls back to clock scrolling</td></tr>
-    <tr><td>Automation (Music)</td><td>First artwork lookup</td><td>Covers fall back to the app icon</td></tr>
-    <tr><td>Accessibility</td><td>Not used in the shipped build</td><td>—</td></tr>
+    <tr><td>Automation (players)</td><td>First artwork lookup or transport command</td><td>Covers fall back to the app icon; transport falls back to a media key</td></tr>
+    <tr><td>Accessibility</td><td>Transport for a player that cannot be scripted</td><td>That tier is skipped</td></tr>
   </table>
 
   <p>Three principles the app holds to, worth carrying into any reproduction:</p>
@@ -1252,6 +1302,18 @@ DO NOT BUILD
 - No app launcher, terminal or notes tab.
 - Nothing that occupies the menu bar while collapsed.
 
+MEDIA — read and write are separate problems
+- READ the session through MediaRemote's MRNowPlayingRequest, from osascript -l
+  JavaScript. A normal app is refused; the system scripting host is not.
+- Do NOT control playback with MRMediaRemoteSendCommand. It returns true and does
+  nothing without Apple's private entitlements. Send transport to the player over
+  Apple events instead (Music, TV, iTunes and Spotify share iTunes' vocabulary), fall
+  back to a systemDefined media key for players that cannot be scripted, and keep
+  MediaRemote only as a last resort.
+- When the feed reports playing with an elapsed time of zero, read the position from
+  the player instead; MediaRemote leaves it at zero for a session it did not see start.
+- Prove each transport control by reading the player's state back after sending it.
+
 CONSTRAINTS
 - Request no permission at launch. Each is triggered by opening the feature.
 - Network access only for weather and lyrics, both off by default.
@@ -1291,7 +1353,8 @@ confirm the panel opens, and screenshot every tab.</div>
   <p class="mono" style="font-size:9pt">AppKit · SwiftUI · Combine · AVFoundation ·
   EventKit · Speech · IOKit.ps · ServiceManagement · UniformTypeIdentifiers</p>
   <p>Plus <code>MediaRemote.framework</code>, reached indirectly through
-  <code>osascript</code> rather than linked.</p>
+  <code>osascript</code> rather than linked, and read-only — playback is controlled
+  through the player itself.</p>
 
   <h3>Where the complexity sits</h3>
   <table>

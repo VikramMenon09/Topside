@@ -50,6 +50,7 @@ in the menu bar icon.
 ```bash
 ./topside-ctl open:shelf
 ./topside-ctl "toast:Build finished"
+./topside-ctl media:next
 ```
 
 See the comments at the top of `topside-ctl` for the full list.
@@ -57,15 +58,18 @@ See the comments at the top of `topside-ctl` for the full list.
 ## Permissions
 
 Each of these is asked for only when you first use the feature it belongs to: Calendar,
-Camera, Microphone and Speech Recognition, and controlling Music for album art.
-Replacing Apple's own volume and brightness popups needs Accessibility access, granted
-in System Settings.
+Camera, Microphone and Speech Recognition, and controlling your music player for album
+art and for the play, pause and skip buttons. Controlling a player that has no scripting
+support — a video in a browser, say — falls back to a system media key, which needs
+Accessibility access granted in System Settings.
 
 ## Notes
 
 Now Playing is read through the private MediaRemote framework via the system scripting
-host, so it may break in a future macOS release. Album art falls back to the player's
-app icon when neither the system nor the player hands one over.
+host, so it may break in a future macOS release. That framework is read-only for an app
+without Apple's private entitlements, so play, pause, skip and seek are sent to the
+player itself instead. Album art falls back to the player's app icon when neither the
+system nor the player hands one over.
 
 Weather comes from open-meteo.com and lyrics from lrclib.net; both are off until you
 turn them on, and only a city name or a song title and artist are sent.
