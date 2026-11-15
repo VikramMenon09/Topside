@@ -4,7 +4,7 @@ A macOS notch app. Hover over the notch and a compact panel drops down.
 
 | Tab | What it does |
 | --- | --- |
-| **Playing** | Now playing from any app, with scrubber, controls, album art and optional lyrics. Your Music playlists are one click away |
+| **Playing** | Now playing from any app, with scrubber, controls, album art and optional lyrics. Your Music playlists, their tracks, and a queue are one click away |
 | **Today** | Upcoming calendar events and weather |
 | **Tray** | Park files by dragging them onto the notch; AirDrop, zip/unzip, Quick Look, share |
 | **Clips** | Searchable clipboard history (in memory only) |
@@ -52,6 +52,7 @@ in the menu bar icon.
 ./topside-ctl "toast:Build finished"
 ./topside-ctl media:next
 ./topside-ctl "playlist:deep focus"
+./topside-ctl "queue:deep focus|Lune"
 ```
 
 See the comments at the top of `topside-ctl` for the full list.
@@ -65,6 +66,10 @@ support — a video in a browser, say — falls back to a system media key, whic
 Accessibility access granted in System Settings.
 
 ## Notes
+
+Playlists, tracks and the queue are Music only — Spotify's scripting interface cannot
+list playlists. The queue is Topside's own, because Music exposes no Up Next: entries
+play as the current track gives way, and are kept in memory only.
 
 Now Playing is read through the private MediaRemote framework via the system scripting
 host, so it may break in a future macOS release. That framework is read-only for an app

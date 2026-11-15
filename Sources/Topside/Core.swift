@@ -180,6 +180,8 @@ final class NotchModel: ObservableObject {
         pinned = false
         // Always reopen on the player, never on whatever list was last left open.
         PlaylistService.shared.browsing = false
+        PlaylistService.shared.showingQueue = false
+        PlaylistService.shared.closePlaylist()
         isOpen = false
         onOpenChange?(false)
     }

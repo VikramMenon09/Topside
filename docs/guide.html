@@ -189,7 +189,7 @@
   <div class="shot"><img src="img/shot-home.png" alt="The Topside panel open on the Now Playing tab"></div>
 
   <div class="meta">
-    <div><b>~2,900 lines</b>Swift 5.9 · SwiftUI + AppKit</div>
+    <div><b>~3,400 lines</b>Swift 5.9 · SwiftUI + AppKit</div>
     <div><b>10 source files</b>No third-party packages</div>
     <div><b>macOS 14+</b>Built and run on macOS 27, Apple M4</div>
   </div>
@@ -321,9 +321,20 @@
     <figure>
       <img src="img/shot-playlists.png" alt="Playlists inside the Playing tab">
       <figcaption><b>Playlists.</b> The Music library's playlists, searchable, with a
-      shuffle toggle. Clicking one starts it and returns to the player. Reached from the
-      Playing tab rather than given a tab of its own. (Names replaced for this
-      document.)</figcaption>
+      shuffle toggle. Reached from the Playing tab rather than given a tab of its own.
+      (Names replaced for this document.)</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-tracks.png" alt="One playlist's tracks">
+      <figcaption><b>Tracks.</b> Opening a playlist lists its tracks, searchable by title
+      or artist. Clicking one plays it with the playlist as context, so playback carries
+      on afterwards; the + queues it. The badge counts what is queued.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-queue.png" alt="The queue">
+      <figcaption><b>Up next.</b> Topside's own queue — Music's scripting interface
+      exposes no Up Next. Each entry plays when the current track gives way; clicking one
+      plays it at once, × drops it.</figcaption>
     </figure>
     <figure>
       <img src="img/shot-today.png" alt="Today tab">
@@ -421,14 +432,14 @@
   <h3>Source files</h3>
   <table>
     <tr><th>File</th><th style="width:12%">Lines</th><th>Holds</th></tr>
-    <tr><td class="k">App.swift</td><td>385</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
-    <tr><td class="k">Core.swift</td><td>281</td><td>Prefs, Tab enum, NotchModel, shared UI pieces, the notch outline shape</td></tr>
-    <tr><td class="k">MediaService.swift</td><td>533</td><td>Now Playing, three-tier transport, artwork, lyrics, playlists</td></tr>
+    <tr><td class="k">App.swift</td><td>402</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
+    <tr><td class="k">Core.swift</td><td>283</td><td>Prefs, Tab enum, NotchModel, shared UI pieces, the notch outline shape</td></tr>
+    <tr><td class="k">MediaService.swift</td><td>709</td><td>Now Playing, three-tier transport, artwork, lyrics, playlists, queue</td></tr>
     <tr><td class="k">SystemServices.swift</td><td>156</td><td>Battery, downloads, CPU/memory/disk</td></tr>
     <tr><td class="k">DataServices.swift</td><td>378</td><td>Calendar, weather, file tray, clipboard, timers</td></tr>
     <tr><td class="k">Tools.swift</td><td>266</td><td>Teleprompter with speech recognition, agent-log reader</td></tr>
     <tr><td class="k">NotchViews.swift</td><td>193</td><td>Root view, collapsed view, open view, tab row, waveform</td></tr>
-    <tr><td class="k">TabsA.swift</td><td>478</td><td>Playing, Today, Tray, Clips</td></tr>
+    <tr><td class="k">TabsA.swift</td><td>631</td><td>Playing, Today, Tray, Clips</td></tr>
     <tr><td class="k">TabsB.swift</td><td>288</td><td>Timer, Mirror, System, Prompt, Agents</td></tr>
     <tr><td class="k">SettingsView.swift</td><td>108</td><td>The settings form</td></tr>
   </table>
@@ -859,6 +870,18 @@ let data = (try? h.readToEnd()) ?? Data()</code></pre>
       starting the playlist, so the choice holds for the next one too.</li>
     <li>Closing the panel always returns the tab to the player, so it never reopens on a
       list the user left behind.</li>
+    <li>A playlist's tracks come from four bulk property fetches
+      (<code>get name of every track of&nbsp;p</code> and so on), joined by ASCII 1 with
+      ASCII 2 between the blocks — neither can occur in a track name. A loop over tracks
+      instead costs about a hundred times as much: a second a track rather than a tenth
+      of a second for four hundred.</li>
+    <li>Playing one track addresses it <em>through</em> its playlist
+      (<code>play (first track of p whose persistent ID is …)</code>), which keeps the
+      playlist as the playback context so the rest follows on.</li>
+    <li>The queue is Topside's own. It holds track and playlist together, is consumed
+      first-in-first-out when the current track gives way, and lives in memory only.
+      Starting an entry suppresses the handler for five seconds, so the change it causes
+      does not eat the entry behind it.</li>
   </ul>
 
   <h3>Today</h3>
@@ -1077,7 +1100,8 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
         // "open" · "open:&lt;tab&gt;" · "close" · "settings"
         // "shelf:&lt;path&gt;" · "timer:&lt;seconds&gt;" · "stoptimer" · "toast:&lt;text&gt;"
         // "media:play" · "media:next" · "media:previous"
-        // "playlists" · "playlist:&lt;name&gt;" · "shuffle:&lt;name&gt;"
+        // "playlists" · "playlists:&lt;name&gt;" · "playlist:&lt;name&gt;"
+        // "shuffle:&lt;name&gt;" · "queue" · "queue:&lt;playlist&gt;|&lt;track&gt;" · "clearqueue"
 }</code></pre>
 
 <pre><code>./topside-ctl open:timer
@@ -1330,10 +1354,14 @@ MEDIA — read and write are separate problems
 - When the feed reports playing with an elapsed time of zero, read the position from
   the player instead; MediaRemote leaves it at zero for a session it did not see start.
 - Prove each transport control by reading the player's state back after sending it.
-- Inside the Playing tab, offer the Music library's playlists: searchable, with a
-  shuffle toggle, starting one on click. Read them only when that list is opened,
-  since asking Music anything launches it, and key them by persistent ID rather than
-  name so duplicates and renames behave.
+- Inside the Playing tab, offer the Music library: playlists, then one playlist's
+  tracks, then a queue, all searchable, with a shuffle toggle. Read them only when a
+  list is opened, since asking Music anything launches it, and key everything by
+  persistent ID rather than name so duplicates and renames behave. Read a playlist's
+  tracks with bulk property fetches, never a loop over tracks.
+- Play a single track through its playlist so the rest follows on. Music exposes no
+  Up Next, so keep the queue yourself and start its head when the current track gives
+  way, suppressing the handler briefly so that change does not eat the next entry.
 
 CONSTRAINTS
 - Request no permission at launch. Each is triggered by opening the feature.
@@ -1362,7 +1390,7 @@ confirm the panel opens, and screenshot every tab.</div>
     ├── App.swift              Entry point · NotchPanel · NotchController · AppDelegate
     ├── Core.swift             Prefs · Tab · NotchModel · shared views · NotchShape
     ├── NotchViews.swift       Root · collapsed · open · tab row · waveform
-    ├── MediaService.swift     Now Playing · transport · artwork chain · lyrics
+    ├── MediaService.swift     Now Playing · transport · artwork · lyrics · playlists · queue
     ├── SystemServices.swift   Battery · downloads · CPU / memory / disk
     ├── DataServices.swift     Calendar · weather · tray · clipboard · timers
     ├── Tools.swift            Teleprompter + speech · agent log reader

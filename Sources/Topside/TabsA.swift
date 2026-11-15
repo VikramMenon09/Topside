@@ -79,68 +79,199 @@ struct PlayerView: View {
     }
 }
 
-/// Browses the user's Music playlists inside the Playing tab, rather than as a tab of
-/// its own: starting a playlist is something you do instead of, or just before, looking
-/// at what is playing.
+/// Browses Music inside the Playing tab, rather than as a tab of its own: starting
+/// something is what you do instead of, or just before, looking at what is playing.
+/// Three screens share one chrome — the playlists, one playlist's tracks, and the queue.
 struct PlaylistsView: View {
     let close: () -> Void
     @ObservedObject private var service = PlaylistService.shared
+    @ObservedObject private var queue = QueueService.shared
     @AppStorage("shufflePlaylists") private var shuffle = false
     @State private var query = ""
 
-    private var shown: [Playlist] {
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return q.isEmpty ? service.items : service.items.filter { $0.name.lowercased().contains(q) }
-    }
-
     var body: some View {
         VStack(spacing: 7) {
-            HStack(spacing: 7) {
-                IconButton(icon: "chevron.left", size: 11, tint: .white.opacity(0.55),
-                           help: "Back to the player", action: close)
-                HStack(spacing: 5) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.35))
-                    TextField("Search playlists", text: $query)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 11.5))
-                }
-                .padding(.horizontal, 8).frame(height: 24)
-                .background(Capsule().fill(Color.white.opacity(0.08)))
-                IconButton(icon: "shuffle", size: 11,
-                           tint: shuffle ? .white : .white.opacity(0.35),
-                           help: shuffle ? "Shuffle on" : "Shuffle off") { shuffle.toggle() }
-                IconButton(icon: "arrow.clockwise", size: 10, tint: .white.opacity(0.35),
-                           help: "Reload from Music") { service.reload() }
-            }
-
-            if service.loading && service.items.isEmpty {
-                centred("Reading your library…")
-            } else if !service.message.isEmpty && service.items.isEmpty {
-                centred(service.message)
-            } else if shown.isEmpty {
-                centred(query.isEmpty ? "No playlists." : "Nothing matches “\(query)”.")
-            } else {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 2) {
-                        ForEach(shown) { item in
-                            PlaylistRow(item: item) { service.play(item, shuffle: shuffle) }
-                        }
-                    }
-                }
-                // The list is taller than the panel, so fade the last row out rather than
-                // slicing it in half.
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0),
-                                             .init(color: .black, location: 0.86),
-                                             .init(color: .clear, location: 1)],
-                                     startPoint: .top, endPoint: .bottom))
-            }
+            header
+            body(for: screen)
         }
         .onAppear {
             // Only ask Music once the list is actually on screen, so nothing launches it
             // merely because the notch was opened.
             if service.playerIsRunning || !service.items.isEmpty { service.reloadIfStale() }
         }
+    }
+
+    private enum Screen { case playlists, tracks, queue }
+
+    private var screen: Screen {
+        if service.showingQueue { return .queue }
+        return service.openPlaylist == nil ? .playlists : .tracks
+    }
+
+    // MARK: Chrome
+
+    private var header: some View {
+        HStack(spacing: 7) {
+            IconButton(icon: "chevron.left", size: 11, tint: .white.opacity(0.55), help: back.help) {
+                query = ""
+                back.action()
+            }
+            if screen == .queue {
+                Text("Up next").font(.system(size: 12, weight: .semibold))
+                Text("\(queue.items.count)")
+                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.4))
+                Spacer(minLength: 4)
+                if !queue.items.isEmpty {
+                    IconButton(icon: "play.fill", size: 11, tint: .white.opacity(0.6),
+                               help: "Play the next one now") { queue.playNow() }
+                    IconButton(icon: "trash", size: 11, tint: .white.opacity(0.35),
+                               help: "Clear the queue") { queue.clear() }
+                }
+            } else {
+                HStack(spacing: 5) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.35))
+                    TextField(searchPrompt, text: $query)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11.5))
+                }
+                .padding(.horizontal, 8).frame(height: 24)
+                .background(Capsule().fill(Color.white.opacity(0.08)))
+                if let open = service.openPlaylist {
+                    IconButton(icon: "shuffle", size: 11, tint: .white.opacity(0.6),
+                               help: "Shuffle this playlist") { service.play(open, shuffle: true) }
+                } else {
+                    IconButton(icon: "shuffle", size: 11,
+                               tint: shuffle ? .white : .white.opacity(0.35),
+                               help: shuffle ? "Playlists start shuffled" : "Playlists start in order") { shuffle.toggle() }
+                    IconButton(icon: "arrow.clockwise", size: 10, tint: .white.opacity(0.35),
+                               help: "Reload from Music") { service.reload() }
+                }
+            }
+            if !queue.items.isEmpty && screen != .queue { queueBadge }
+        }
+    }
+
+    private var searchPrompt: String {
+        service.openPlaylist.map { "Search \($0.name)" } ?? "Search playlists"
+    }
+
+    private var back: (help: String, action: () -> Void) {
+        switch screen {
+        case .queue: return ("Back", { service.showingQueue = false })
+        case .tracks: return ("All playlists", { service.closePlaylist() })
+        case .playlists: return ("Back to the player", close)
+        }
+    }
+
+    private var queueBadge: some View {
+        Button { service.showingQueue = true } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "text.append").font(.system(size: 9, weight: .semibold))
+                Text("\(queue.items.count)").font(.system(size: 10, weight: .semibold).monospacedDigit())
+            }
+            .foregroundStyle(.white.opacity(0.75))
+            .padding(.horizontal, 7).frame(height: 20)
+            .background(Capsule().fill(Color.white.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+        .help("\(queue.items.count) queued")
+    }
+
+    // MARK: Screens
+
+    @ViewBuilder
+    private func body(for screen: Screen) -> some View {
+        switch screen {
+        case .playlists: playlists
+        case .tracks: trackList
+        case .queue: queueList
+        }
+    }
+
+    private var matchingPlaylists: [Playlist] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        return q.isEmpty ? service.items : service.items.filter { $0.name.lowercased().contains(q) }
+    }
+
+    @ViewBuilder
+    private var playlists: some View {
+        if service.loading && service.items.isEmpty {
+            centred("Reading your library…")
+        } else if !service.message.isEmpty && service.items.isEmpty {
+            centred(service.message)
+        } else if matchingPlaylists.isEmpty {
+            centred(query.isEmpty ? "No playlists." : "Nothing matches “\(query)”.")
+        } else {
+            scroller {
+                ForEach(matchingPlaylists) { item in
+                    RowButton(
+                        icon: "music.note.list",
+                        title: item.name,
+                        trailing: "\(item.count)",
+                        tap: { service.open(item) })
+                }
+            }
+        }
+    }
+
+    private var matchingTracks: [PlaylistTrack] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return service.tracks }
+        return service.tracks.filter { $0.name.lowercased().contains(q) || $0.artist.lowercased().contains(q) }
+    }
+
+    @ViewBuilder
+    private var trackList: some View {
+        if service.loadingTracks {
+            centred("Reading the playlist…")
+        } else if matchingTracks.isEmpty {
+            centred(query.isEmpty ? "This playlist is empty." : "Nothing matches “\(query)”.")
+        } else if let open = service.openPlaylist {
+            scroller {
+                ForEach(matchingTracks) { track in
+                    RowButton(
+                        icon: "play.fill",
+                        title: track.name,
+                        subtitle: track.artist,
+                        accessory: ("plus", "Add to the queue", { queue.add(track, from: open) }),
+                        tap: { service.play(track, in: open) })
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var queueList: some View {
+        if queue.items.isEmpty {
+            centred("Nothing queued. Add tracks with the + beside them.")
+        } else {
+            scroller {
+                ForEach(queue.items) { item in
+                    RowButton(
+                        icon: "music.note",
+                        title: item.track.name,
+                        subtitle: item.track.artist,
+                        accessory: ("xmark", "Remove from the queue", { queue.remove(item) }),
+                        tap: { queue.playNow(item) })
+                }
+            }
+        }
+    }
+
+    // MARK: Pieces
+
+    private func scroller<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 2) { content() }
+        }
+        // The list is taller than the panel, so fade the last row out rather than
+        // slicing it in half.
+        .mask(LinearGradient(stops: [.init(color: .black, location: 0),
+                                     .init(color: .black, location: 0.86),
+                                     .init(color: .clear, location: 1)],
+                             startPoint: .top, endPoint: .bottom))
     }
 
     private func centred(_ text: String) -> some View {
@@ -157,30 +288,52 @@ struct PlaylistsView: View {
     }
 }
 
-struct PlaylistRow: View {
-    let item: Playlist
-    let play: () -> Void
+/// One row of any of the three lists: an icon that turns into a play arrow on hover, a
+/// title, an optional dimmed subtitle, and either a trailing figure or a button.
+struct RowButton: View {
+    let icon: String
+    let title: String
+    var subtitle: String = ""
+    var trailing: String = ""
+    var accessory: (icon: String, help: String, action: () -> Void)?
+    let tap: () -> Void
     @State private var hover = false
 
     var body: some View {
-        Button(action: play) {
-            HStack(spacing: 8) {
-                Image(systemName: hover ? "play.fill" : "music.note.list")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(hover ? 0.9 : 0.35))
-                    .frame(width: 14)
-                Text(item.name).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                Spacer(minLength: 6)
-                Text("\(item.count)")
+        HStack(spacing: 8) {
+            Image(systemName: hover ? "play.fill" : icon)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(hover ? 0.9 : 0.35))
+                .frame(width: 14)
+            Text(title).font(.system(size: 12, weight: .medium)).lineLimit(1)
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.4))
+                    .lineLimit(1).layoutPriority(-1)
+            }
+            Spacer(minLength: 6)
+            if !trailing.isEmpty {
+                Text(trailing)
                     .font(.system(size: 10, weight: .medium).monospacedDigit())
                     .foregroundStyle(.white.opacity(0.35))
             }
-            .padding(.horizontal, 9).frame(height: 26)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(hover ? 0.12 : 0.05)))
-            .contentShape(Rectangle())
+            if let accessory {
+                Button(action: accessory.action) {
+                    Image(systemName: accessory.icon)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(hover ? 0.8 : 0.3))
+                        .frame(width: 18, height: 18)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(accessory.help)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 9).frame(height: 26)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.white.opacity(hover ? 0.12 : 0.05)))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: tap)
         .onHover { hover = $0 }
     }
 }

@@ -409,6 +409,13 @@ struct Playlist: Identifiable, Equatable {
     let count: Int
 }
 
+struct PlaylistTrack: Identifiable, Equatable {
+    let id: String  // Music's persistent ID for the track.
+    let name: String
+    let artist: String
+    let duration: Double
+}
+
 /// The user's Music playlists, read over Apple events.
 ///
 /// Loaded only when the list is actually opened: the query takes a couple of seconds on a
@@ -420,6 +427,12 @@ final class PlaylistService: ObservableObject {
 
     /// Whether the Playing tab is showing the list rather than the player.
     @Published var browsing = false
+    /// The playlist whose tracks are open, if any.
+    @Published var openPlaylist: Playlist?
+    /// Whether the browser is showing the queue rather than a list of music.
+    @Published var showingQueue = false
+    @Published private(set) var tracks: [PlaylistTrack] = []
+    @Published private(set) var loadingTracks = false
     @Published private(set) var items: [Playlist] = []
     @Published private(set) var loading = false
     @Published private(set) var message = ""
@@ -472,6 +485,132 @@ final class PlaylistService: ObservableObject {
         }
     }
 
+    /// Reads one playlist's tracks. Four bulk property fetches rather than a loop over
+    /// tracks: on a 425-track playlist that is a tenth of a second instead of half a
+    /// minute. The lists come back joined by control characters, which cannot occur in a
+    /// track name.
+    private static func tracksScript(_ playlistID: String) -> String {
+        """
+        tell application id "com.apple.Music"
+            set p to first playlist whose persistent ID is "\(playlistID)"
+            set ids to (get persistent ID of every track of p)
+            set ns to (get name of every track of p)
+            set ars to (get artist of every track of p)
+            set ds to (get duration of every track of p)
+            set AppleScript's text item delimiters to (ASCII character 1)
+            set r to (ids as text) & (ASCII character 2) & (ns as text) & ¬
+                (ASCII character 2) & (ars as text) & (ASCII character 2) & (ds as text)
+            set AppleScript's text item delimiters to ""
+            return r
+        end tell
+        """
+    }
+
+    private func fetchTracks(_ id: String, then done: @escaping ([PlaylistTrack]) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let out = Shell.run("/usr/bin/osascript", ["-e", Self.tracksScript(id)]).out
+            let blocks = out.components(separatedBy: "\u{02}")
+            var rows: [PlaylistTrack] = []
+            if blocks.count >= 4 {
+                let cols = blocks.map { $0.components(separatedBy: "\u{01}") }
+                let n = cols.map(\.count).min() ?? 0
+                rows = (0..<n).compactMap { i in
+                    let name = cols[1][i].trimmingCharacters(in: .newlines)
+                    guard !name.isEmpty else { return nil }
+                    return PlaylistTrack(id: cols[0][i], name: name,
+                                         artist: cols[2][i].trimmingCharacters(in: .newlines),
+                                         duration: Double(cols[3][i].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0)
+                }
+            }
+            onMain { done(rows) }
+        }
+    }
+
+    func open(_ playlist: Playlist) {
+        openPlaylist = playlist
+        tracks = []
+        loadingTracks = true
+        fetchTracks(playlist.id) { [weak self] rows in
+            guard let self, self.openPlaylist?.id == playlist.id else { return }
+            self.loadingTracks = false
+            self.tracks = rows
+        }
+    }
+
+    /// Queues a track by name for the scripting channel: "<playlist>|<track>", both
+    /// matched case-insensitively, the track by substring.
+    func queueByName(_ playlistName: String, _ trackQuery: String) {
+        withPlaylist(named: playlistName) { playlist in
+            self.fetchTracks(playlist.id) { rows in
+                let q = trackQuery.lowercased()
+                guard let hit = rows.first(where: { $0.name.lowercased().contains(q) }) else {
+                    ActivityCenter.shared.show(Toast(icon: "questionmark.circle",
+                                                     text: "No track matching “\(trackQuery)”"))
+                    return
+                }
+                QueueService.shared.add(hit, from: playlist)
+            }
+        }
+    }
+
+    /// Runs a block with a named playlist, reading the list first if it is not loaded.
+    private func withPlaylist(named name: String, then use: @escaping (Playlist) -> Void) {
+        func resolve() {
+            guard let match = self.playlist(named: name) else {
+                ActivityCenter.shared.show(Toast(icon: "questionmark.circle", text: "No playlist called “\(name)”"))
+                return
+            }
+            use(match)
+        }
+        guard items.isEmpty else { return resolve() }
+        reload()
+        var waits = 0
+        func retry() {
+            guard waits < 40 else { return }
+            waits += 1
+            if loading {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: retry)
+            } else {
+                resolve()
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: retry)
+    }
+
+    func closePlaylist() {
+        openPlaylist = nil
+        tracks = []
+    }
+
+    /// Opens a playlist's tracks by name, for the scripting channel.
+    func openByName(_ name: String) {
+        withPlaylist(named: name) { self.open($0) }
+    }
+
+    /// Starts one track with its playlist as the context, so playback carries on through
+    /// the rest of the playlist afterwards.
+    func play(_ track: PlaylistTrack, in playlist: Playlist, shuffle: Bool = false) {
+        let script = """
+        tell application id "com.apple.Music"
+            set shuffle enabled to \(shuffle)
+            set p to first playlist whose persistent ID is "\(playlist.id)"
+            play (first track of p whose persistent ID is "\(track.id)")
+        end tell
+        """
+        DispatchQueue.global(qos: .userInitiated).async {
+            let ok = Shell.run("/usr/bin/osascript", ["-e", script]).status == 0
+            onMain {
+                self.browsing = false
+                self.closePlaylist()
+                if !ok {
+                    ActivityCenter.shared.show(Toast(icon: "exclamationmark.triangle.fill",
+                                                     text: "Could not play \(track.name)"))
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MediaService.shared.refresh() }
+            }
+        }
+    }
+
     func play(_ playlist: Playlist, shuffle: Bool) {
         // The identifier is Music's own hexadecimal persistent ID, so it needs no quoting.
         let script = """
@@ -484,6 +623,7 @@ final class PlaylistService: ObservableObject {
             let ok = Shell.run("/usr/bin/osascript", ["-e", script]).status == 0
             onMain {
                 self.browsing = false
+                self.closePlaylist()
                 ActivityCenter.shared.show(ok
                     ? Toast(icon: shuffle ? "shuffle" : "play.fill", text: playlist.name)
                     : Toast(icon: "exclamationmark.triangle.fill", text: "Could not play \(playlist.name)"))
@@ -495,31 +635,7 @@ final class PlaylistService: ObservableObject {
     /// Starts a playlist by name, for the scripting channel. Loads the list first when it
     /// has not been read yet, so a script works on a cold start.
     func playByName(_ name: String, shuffle: Bool) {
-        guard !items.isEmpty else {
-            reload()
-            // `loading` clears on the main queue once the read finishes.
-            var waits = 0
-            func retry() {
-                guard waits < 40 else { return }
-                waits += 1
-                if loading {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: retry)
-                } else {
-                    resolveAndPlay(name, shuffle: shuffle)
-                }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: retry)
-            return
-        }
-        resolveAndPlay(name, shuffle: shuffle)
-    }
-
-    private func resolveAndPlay(_ name: String, shuffle: Bool) {
-        if let match = playlist(named: name) {
-            play(match, shuffle: shuffle)
-        } else {
-            ActivityCenter.shared.show(Toast(icon: "questionmark.circle", text: "No playlist called “\(name)”"))
-        }
+        withPlaylist(named: name) { self.play($0, shuffle: shuffle) }
     }
 
     /// Resolves a name for the scripting channel: exact first, then a prefix, then any
@@ -529,5 +645,65 @@ final class PlaylistService: ObservableObject {
         return items.first { $0.name.lowercased() == n }
             ?? items.first { $0.name.lowercased().hasPrefix(n) }
             ?? items.first { $0.name.lowercased().contains(n) }
+    }
+}
+
+// MARK: - Queue
+
+struct QueuedTrack: Identifiable, Equatable {
+    let id = UUID()
+    let track: PlaylistTrack
+    let playlist: Playlist
+}
+
+/// A play queue kept by Topside rather than by Music.
+///
+/// Music's scripting interface exposes no Up Next, so there is nothing to add to: the
+/// queue lives here, and the next entry is started when the current track gives way.
+/// A track change caused by the queue itself must not consume the following entry, so
+/// starting one suppresses the handler briefly.
+final class QueueService: ObservableObject {
+    static let shared = QueueService()
+
+    @Published private(set) var items: [QueuedTrack] = []
+
+    private var suppressUntil = Date.distantPast
+    private var bag = Set<AnyCancellable>()
+
+    func start() {
+        MediaService.shared.$track
+            .map { $0?.title ?? "" }
+            .removeDuplicates()
+            .dropFirst()  // The current track is not a change.
+            .sink { [weak self] _ in self?.advance() }
+            .store(in: &bag)
+    }
+
+    func add(_ track: PlaylistTrack, from playlist: Playlist) {
+        items.append(QueuedTrack(track: track, playlist: playlist))
+        ActivityCenter.shared.show(Toast(icon: "text.append", text: "Queued \(track.name)"))
+    }
+
+    func remove(_ item: QueuedTrack) {
+        items.removeAll { $0.id == item.id }
+    }
+
+    func clear() { items.removeAll() }
+
+    /// Plays a queued track now, skipping whatever is on, and drops it from the queue.
+    func playNow(_ item: QueuedTrack? = nil) {
+        guard let next = item ?? items.first else { return }
+        items.removeAll { $0.id == next.id }
+        start(next)
+    }
+
+    private func advance() {
+        guard Date() > suppressUntil, !items.isEmpty else { return }
+        start(items.removeFirst())
+    }
+
+    private func start(_ item: QueuedTrack) {
+        suppressUntil = Date().addingTimeInterval(5)
+        PlaylistService.shared.play(item.track, in: item.playlist)
     }
 }

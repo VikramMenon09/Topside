@@ -9,4 +9,6 @@
 #   ./topside-ctl "toast:Build finished"
 #   ./topside-ctl media:play            play/pause; media:next and media:previous skip
 #   ./topside-ctl "playlist:study vibes"   play a Music playlist; shuffle: shuffles it
+#   ./topside-ctl playlists               open the playlist browser in the notch
+#   ./topside-ctl "queue:study vibes|Nocturnal"   queue one track; clearqueue empties it
 exec /usr/bin/osascript -l JavaScript -e 'function run(a){ObjC.import("Foundation");$.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("local.topside.control",a[0],$(),true)}' "${1:-open}"

@@ -182,6 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installStatusItem()
 
         MediaService.shared.start()
+        QueueService.shared.start()
         BatteryService.shared.start()
         ClipboardService.shared.start()
         TimerService.shared.start()
@@ -205,7 +206,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Scripting hook: post the distributed notification "local.topside.control" with an object of
         // "open", "open:<tab>", "close", "settings", "shelf:<path>", "timer:<seconds>", "stoptimer",
         // "toast:<text>", "media:<play|next|previous>", "playlist:<name>" or
-        // "shuffle:<name>" or "playlists" to drive the notch from scripts.
+        // "shuffle:<name>", "playlists", "queue:<playlist>|<track>" or "clearqueue"
+        // to drive the notch from scripts.
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("local.topside.control"), object: nil, queue: .main) { [weak self] note in
             guard let self, let cmd = note.object as? String, let model = self.controllers.first?.model else { return }
             let parts = cmd.split(separator: ":", maxSplits: 1).map(String.init)
@@ -222,8 +224,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "toast": ActivityCenter.shared.show(Toast(icon: "bell.fill", text: parts.count > 1 ? parts[1] : "Hello"))
             case "playlists":
                 PlaylistService.shared.browsing = true
+                PlaylistService.shared.showingQueue = false
+                if parts.count > 1 { PlaylistService.shared.openByName(parts[1]) }
                 model.pinned = true
                 model.open(.home)
+            case "queue":
+                // "queue:<playlist>|<track>" adds one; bare "queue" shows the list.
+                let f = (parts.count > 1 ? parts[1] : "").split(separator: "|", maxSplits: 1).map(String.init)
+                if f.count == 2 {
+                    PlaylistService.shared.queueByName(f[0], f[1])
+                } else {
+                    PlaylistService.shared.browsing = true
+                    PlaylistService.shared.showingQueue = true
+                    model.pinned = true
+                    model.open(.home)
+                }
+            case "clearqueue":
+                QueueService.shared.clear()
             case "playlist", "shuffle":
                 if parts.count > 1 {
                     PlaylistService.shared.playByName(parts[1], shuffle: parts[0] == "shuffle")
