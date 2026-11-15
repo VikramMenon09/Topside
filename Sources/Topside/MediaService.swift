@@ -114,6 +114,9 @@ final class MediaService: ObservableObject {
         return t.duration > 0 ? min(max(e, 0), t.duration) : max(e, 0)
     }
 
+    /// Re-reads the session now, rather than waiting for the next tick.
+    func refresh() { poll() }
+
     private func poll() {
         guard !busy else { return }
         busy = true
@@ -395,5 +398,136 @@ final class MediaService: ObservableObject {
         guard !lyrics.isEmpty, lyrics[0].time >= 0 else { return nil }
         let e = elapsed(at: now)
         return lyrics.last(where: { $0.time <= e })?.text
+    }
+}
+
+// MARK: - Playlists
+
+struct Playlist: Identifiable, Equatable {
+    let id: String  // Music's persistent ID, which survives renaming and is unique.
+    let name: String
+    let count: Int
+}
+
+/// The user's Music playlists, read over Apple events.
+///
+/// Loaded only when the list is actually opened: the query takes a couple of seconds on a
+/// large library, and asking Music anything launches it, which should never happen behind
+/// the user's back.
+final class PlaylistService: ObservableObject {
+    static let shared = PlaylistService()
+    static let player = "com.apple.Music"
+
+    /// Whether the Playing tab is showing the list rather than the player.
+    @Published var browsing = false
+    @Published private(set) var items: [Playlist] = []
+    @Published private(set) var loading = false
+    @Published private(set) var message = ""
+
+    private var loadedAt: Date?
+
+    /// Checked without Apple events, so it cannot launch Music as a side effect.
+    var playerIsRunning: Bool {
+        !NSRunningApplication.runningApplications(withBundleIdentifier: Self.player).isEmpty
+    }
+
+    private static let listScript = """
+    tell application id "com.apple.Music"
+        set out to ""
+        repeat with p in (every user playlist whose special kind is none)
+            try
+                set out to out & (persistent ID of p) & tab & (name of p) & tab & (count of tracks of p) & linefeed
+            end try
+        end repeat
+        return out
+    end tell
+    """
+
+    func reloadIfStale() {
+        guard let at = loadedAt else { return reload() }
+        if Date().timeIntervalSince(at) > 300 { reload() }
+    }
+
+    func reload() {
+        guard !loading else { return }
+        loading = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = Shell.run("/usr/bin/osascript", ["-e", Self.listScript])
+            let rows: [Playlist] = result.out.split(separator: "\n").compactMap { line in
+                let f = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+                guard f.count >= 3, !f[1].isEmpty else { return nil }
+                return Playlist(id: f[0], name: f[1], count: Int(f[2]) ?? 0)
+            }
+            onMain {
+                self.loading = false
+                self.loadedAt = Date()
+                self.items = rows.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                if result.status != 0 {
+                    // Almost always a declined or never-asked Automation prompt.
+                    self.message = "Music would not answer. Allow Topside to control Music in System Settings › Privacy & Security › Automation."
+                } else {
+                    self.message = rows.isEmpty ? "No playlists in Music." : ""
+                }
+            }
+        }
+    }
+
+    func play(_ playlist: Playlist, shuffle: Bool) {
+        // The identifier is Music's own hexadecimal persistent ID, so it needs no quoting.
+        let script = """
+        tell application id "com.apple.Music"
+            set shuffle enabled to \(shuffle)
+            play (first playlist whose persistent ID is "\(playlist.id)")
+        end tell
+        """
+        DispatchQueue.global(qos: .userInitiated).async {
+            let ok = Shell.run("/usr/bin/osascript", ["-e", script]).status == 0
+            onMain {
+                self.browsing = false
+                ActivityCenter.shared.show(ok
+                    ? Toast(icon: shuffle ? "shuffle" : "play.fill", text: playlist.name)
+                    : Toast(icon: "exclamationmark.triangle.fill", text: "Could not play \(playlist.name)"))
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MediaService.shared.refresh() }
+            }
+        }
+    }
+
+    /// Starts a playlist by name, for the scripting channel. Loads the list first when it
+    /// has not been read yet, so a script works on a cold start.
+    func playByName(_ name: String, shuffle: Bool) {
+        guard !items.isEmpty else {
+            reload()
+            // `loading` clears on the main queue once the read finishes.
+            var waits = 0
+            func retry() {
+                guard waits < 40 else { return }
+                waits += 1
+                if loading {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: retry)
+                } else {
+                    resolveAndPlay(name, shuffle: shuffle)
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: retry)
+            return
+        }
+        resolveAndPlay(name, shuffle: shuffle)
+    }
+
+    private func resolveAndPlay(_ name: String, shuffle: Bool) {
+        if let match = playlist(named: name) {
+            play(match, shuffle: shuffle)
+        } else {
+            ActivityCenter.shared.show(Toast(icon: "questionmark.circle", text: "No playlist called “\(name)”"))
+        }
+    }
+
+    /// Resolves a name for the scripting channel: exact first, then a prefix, then any
+    /// playlist containing the text. All case-insensitive.
+    func playlist(named name: String) -> Playlist? {
+        let n = name.lowercased()
+        return items.first { $0.name.lowercased() == n }
+            ?? items.first { $0.name.lowercased().hasPrefix(n) }
+            ?? items.first { $0.name.lowercased().contains(n) }
     }
 }

@@ -7,8 +7,18 @@ import UniformTypeIdentifiers
 struct PlayerView: View {
     @ObservedObject private var media = MediaService.shared
     @AppStorage("lyrics") private var lyricsOn = false
+    @ObservedObject private var playlists = PlaylistService.shared
 
     var body: some View {
+        if playlists.browsing {
+            PlaylistsView(close: { playlists.browsing = false })
+        } else {
+            player
+        }
+    }
+
+    @ViewBuilder
+    private var player: some View {
         if let t = media.track {
             VStack(spacing: 9) {
                 HStack(spacing: 11) {
@@ -22,27 +32,35 @@ struct PlayerView: View {
                     Waveform(playing: media.isPlaying)
                 }
                 Scrubber()
-                HStack {
-                    IconButton(icon: "quote.bubble" + (lyricsOn ? ".fill" : ""), size: 12,
-                               tint: lyricsOn ? .white : .white.opacity(0.4),
-                               help: lyricsOn ? "Hide lyrics" : "Show lyrics (looks the song up on lrclib.net)") {
-                        lyricsOn.toggle()
-                        media.reloadLyrics()
+                // Transport sits in its own centred layer, so the side buttons never pull
+                // it off the panel's midline however many of them there are.
+                ZStack {
+                    HStack(spacing: 0) {
+                        IconButton(icon: "music.note.list", size: 12, tint: .white.opacity(0.4),
+                                   help: "Playlists") { playlists.browsing = true }
+                        IconButton(icon: "quote.bubble" + (lyricsOn ? ".fill" : ""), size: 12,
+                                   tint: lyricsOn ? .white : .white.opacity(0.4),
+                                   help: lyricsOn ? "Hide lyrics" : "Show lyrics (looks the song up on lrclib.net)") {
+                            lyricsOn.toggle()
+                            media.reloadLyrics()
+                        }
+                        Spacer(minLength: 0)
+                        IconButton(icon: "arrow.up.forward.app", size: 12, tint: .white.opacity(0.4), help: "Open \(t.appName)") { media.activatePlayer() }
                     }
-                    Spacer()
-                    IconButton(icon: "backward.fill", size: 14, help: "Previous") { media.previous() }
-                    IconButton(icon: media.isPlaying ? "pause.fill" : "play.fill", size: 20, help: "Play/Pause") { media.togglePlay() }
-                        .padding(.horizontal, 12)
-                    IconButton(icon: "forward.fill", size: 14, help: "Next") { media.next() }
-                    Spacer()
-                    IconButton(icon: "arrow.up.forward.app", size: 12, tint: .white.opacity(0.4), help: "Open \(t.appName)") { media.activatePlayer() }
+                    HStack(spacing: 0) {
+                        IconButton(icon: "backward.fill", size: 14, help: "Previous") { media.previous() }
+                        IconButton(icon: media.isPlaying ? "pause.fill" : "play.fill", size: 20, help: "Play/Pause") { media.togglePlay() }
+                            .padding(.horizontal, 12)
+                        IconButton(icon: "forward.fill", size: 14, help: "Next") { media.next() }
+                    }
                 }
                 if lyricsOn { LyricLineView() }
             }
         } else {
-            VStack(spacing: 6) {
-                Image(systemName: "music.note").font(.system(size: 22)).foregroundStyle(.white.opacity(0.3))
+            VStack(spacing: 9) {
+                Image(systemName: "music.note").font(.system(size: 20)).foregroundStyle(.white.opacity(0.3))
                 Text("Nothing playing").font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.45))
+                Pill(text: "Playlists") { playlists.browsing = true }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -58,6 +76,112 @@ struct PlayerView: View {
         }
         .frame(width: 44, height: 44)
         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+    }
+}
+
+/// Browses the user's Music playlists inside the Playing tab, rather than as a tab of
+/// its own: starting a playlist is something you do instead of, or just before, looking
+/// at what is playing.
+struct PlaylistsView: View {
+    let close: () -> Void
+    @ObservedObject private var service = PlaylistService.shared
+    @AppStorage("shufflePlaylists") private var shuffle = false
+    @State private var query = ""
+
+    private var shown: [Playlist] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        return q.isEmpty ? service.items : service.items.filter { $0.name.lowercased().contains(q) }
+    }
+
+    var body: some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 7) {
+                IconButton(icon: "chevron.left", size: 11, tint: .white.opacity(0.55),
+                           help: "Back to the player", action: close)
+                HStack(spacing: 5) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.35))
+                    TextField("Search playlists", text: $query)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11.5))
+                }
+                .padding(.horizontal, 8).frame(height: 24)
+                .background(Capsule().fill(Color.white.opacity(0.08)))
+                IconButton(icon: "shuffle", size: 11,
+                           tint: shuffle ? .white : .white.opacity(0.35),
+                           help: shuffle ? "Shuffle on" : "Shuffle off") { shuffle.toggle() }
+                IconButton(icon: "arrow.clockwise", size: 10, tint: .white.opacity(0.35),
+                           help: "Reload from Music") { service.reload() }
+            }
+
+            if service.loading && service.items.isEmpty {
+                centred("Reading your library…")
+            } else if !service.message.isEmpty && service.items.isEmpty {
+                centred(service.message)
+            } else if shown.isEmpty {
+                centred(query.isEmpty ? "No playlists." : "Nothing matches “\(query)”.")
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 2) {
+                        ForEach(shown) { item in
+                            PlaylistRow(item: item) { service.play(item, shuffle: shuffle) }
+                        }
+                    }
+                }
+                // The list is taller than the panel, so fade the last row out rather than
+                // slicing it in half.
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0),
+                                             .init(color: .black, location: 0.86),
+                                             .init(color: .clear, location: 1)],
+                                     startPoint: .top, endPoint: .bottom))
+            }
+        }
+        .onAppear {
+            // Only ask Music once the list is actually on screen, so nothing launches it
+            // merely because the notch was opened.
+            if service.playerIsRunning || !service.items.isEmpty { service.reloadIfStale() }
+        }
+    }
+
+    private func centred(_ text: String) -> some View {
+        VStack(spacing: 8) {
+            Text(text)
+                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            if !service.playerIsRunning && service.items.isEmpty && !service.loading {
+                Pill(text: "Open Music") { service.reload() }
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct PlaylistRow: View {
+    let item: Playlist
+    let play: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: play) {
+            HStack(spacing: 8) {
+                Image(systemName: hover ? "play.fill" : "music.note.list")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(hover ? 0.9 : 0.35))
+                    .frame(width: 14)
+                Text(item.name).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                Spacer(minLength: 6)
+                Text("\(item.count)")
+                    .font(.system(size: 10, weight: .medium).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .padding(.horizontal, 9).frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.white.opacity(hover ? 0.12 : 0.05)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
     }
 }
 

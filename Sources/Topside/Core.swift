@@ -178,6 +178,8 @@ final class NotchModel: ObservableObject {
     func close() {
         guard isOpen else { return }
         pinned = false
+        // Always reopen on the player, never on whatever list was last left open.
+        PlaylistService.shared.browsing = false
         isOpen = false
         onOpenChange?(false)
     }

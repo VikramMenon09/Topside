@@ -189,7 +189,7 @@
   <div class="shot"><img src="img/shot-home.png" alt="The Topside panel open on the Now Playing tab"></div>
 
   <div class="meta">
-    <div><b>~2,700 lines</b>Swift 5.9 · SwiftUI + AppKit</div>
+    <div><b>~2,900 lines</b>Swift 5.9 · SwiftUI + AppKit</div>
     <div><b>10 source files</b>No third-party packages</div>
     <div><b>macOS 14+</b>Built and run on macOS 27, Apple M4</div>
   </div>
@@ -315,8 +315,15 @@
     <figure>
       <img src="img/shot-home.png" alt="Playing tab">
       <figcaption><b>Playing.</b> Artwork, title and artist, a live waveform, a draggable
-      scrubber showing elapsed and remaining time, and transport controls. The icon at
-      right opens the player app.</figcaption>
+      scrubber showing elapsed and remaining time, and transport controls. Bottom left
+      opens the playlists and toggles lyrics; the icon at right opens the player app.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shot-playlists.png" alt="Playlists inside the Playing tab">
+      <figcaption><b>Playlists.</b> The Music library's playlists, searchable, with a
+      shuffle toggle. Clicking one starts it and returns to the player. Reached from the
+      Playing tab rather than given a tab of its own. (Names replaced for this
+      document.)</figcaption>
     </figure>
     <figure>
       <img src="img/shot-today.png" alt="Today tab">
@@ -414,14 +421,14 @@
   <h3>Source files</h3>
   <table>
     <tr><th>File</th><th style="width:12%">Lines</th><th>Holds</th></tr>
-    <tr><td class="k">App.swift</td><td>376</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
-    <tr><td class="k">Core.swift</td><td>279</td><td>Prefs, Tab enum, NotchModel, shared UI pieces, the notch outline shape</td></tr>
-    <tr><td class="k">MediaService.swift</td><td>399</td><td>Now Playing, three-tier transport, artwork, lyrics</td></tr>
+    <tr><td class="k">App.swift</td><td>385</td><td>Entry point, NSPanel, NotchController, AppDelegate, menu bar hider</td></tr>
+    <tr><td class="k">Core.swift</td><td>281</td><td>Prefs, Tab enum, NotchModel, shared UI pieces, the notch outline shape</td></tr>
+    <tr><td class="k">MediaService.swift</td><td>533</td><td>Now Playing, three-tier transport, artwork, lyrics, playlists</td></tr>
     <tr><td class="k">SystemServices.swift</td><td>156</td><td>Battery, downloads, CPU/memory/disk</td></tr>
     <tr><td class="k">DataServices.swift</td><td>378</td><td>Calendar, weather, file tray, clipboard, timers</td></tr>
     <tr><td class="k">Tools.swift</td><td>266</td><td>Teleprompter with speech recognition, agent-log reader</td></tr>
     <tr><td class="k">NotchViews.swift</td><td>193</td><td>Root view, collapsed view, open view, tab row, waveform</td></tr>
-    <tr><td class="k">TabsA.swift</td><td>354</td><td>Playing, Today, Tray, Clips</td></tr>
+    <tr><td class="k">TabsA.swift</td><td>478</td><td>Playing, Today, Tray, Clips</td></tr>
     <tr><td class="k">TabsB.swift</td><td>288</td><td>Timer, Mirror, System, Prompt, Agents</td></tr>
     <tr><td class="k">SettingsView.swift</td><td>108</td><td>The settings form</td></tr>
   </table>
@@ -844,6 +851,14 @@ let data = (try? h.readToEnd()) ?? Data()</code></pre>
       <code>lrclib.net</code>; timed lyrics are parsed from LRC and the current line is
       shown.</li>
     <li>Apps can be excluded by bundle ID or name through a comma-separated setting.</li>
+    <li>The playlist list is read from Music over Apple events, cached for five minutes
+      and loaded only when the list is opened — asking Music anything launches it, which
+      must never happen merely because the notch was hovered. Rows carry Music's
+      persistent ID, so duplicate names and renames both resolve correctly.</li>
+    <li>Shuffle is a sticky toggle: it sets <code>shuffle enabled</code> on Music before
+      starting the playlist, so the choice holds for the next one too.</li>
+    <li>Closing the panel always returns the tab to the player, so it never reopens on a
+      list the user left behind.</li>
   </ul>
 
   <h3>Today</h3>
@@ -1062,11 +1077,13 @@ codesign --force --sign "${ID:--}" "$APP"</code></pre>
         // "open" · "open:&lt;tab&gt;" · "close" · "settings"
         // "shelf:&lt;path&gt;" · "timer:&lt;seconds&gt;" · "stoptimer" · "toast:&lt;text&gt;"
         // "media:play" · "media:next" · "media:previous"
+        // "playlists" · "playlist:&lt;name&gt;" · "shuffle:&lt;name&gt;"
 }</code></pre>
 
 <pre><code>./topside-ctl open:timer
 ./topside-ctl "toast:Build finished"
-./topside-ctl timer:300</code></pre>
+./topside-ctl timer:300
+./topside-ctl "playlist:deep focus"</code></pre>
 
   <div class="key"><b>This is how every screenshot in this document was taken.</b> A short
   Swift program puts a plain backdrop window above the menu bar but below the panel, then
@@ -1313,6 +1330,10 @@ MEDIA — read and write are separate problems
 - When the feed reports playing with an elapsed time of zero, read the position from
   the player instead; MediaRemote leaves it at zero for a session it did not see start.
 - Prove each transport control by reading the player's state back after sending it.
+- Inside the Playing tab, offer the Music library's playlists: searchable, with a
+  shuffle toggle, starting one on click. Read them only when that list is opened,
+  since asking Music anything launches it, and key them by persistent ID rather than
+  name so duplicates and renames behave.
 
 CONSTRAINTS
 - Request no permission at launch. Each is triggered by opening the feature.

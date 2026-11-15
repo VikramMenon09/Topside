@@ -4,7 +4,7 @@ A macOS notch app. Hover over the notch and a compact panel drops down.
 
 | Tab | What it does |
 | --- | --- |
-| **Playing** | Now playing from any app, with scrubber, controls, album art and optional lyrics |
+| **Playing** | Now playing from any app, with scrubber, controls, album art and optional lyrics. Your Music playlists are one click away |
 | **Today** | Upcoming calendar events and weather |
 | **Tray** | Park files by dragging them onto the notch; AirDrop, zip/unzip, Quick Look, share |
 | **Clips** | Searchable clipboard history (in memory only) |
@@ -51,6 +51,7 @@ in the menu bar icon.
 ./topside-ctl open:shelf
 ./topside-ctl "toast:Build finished"
 ./topside-ctl media:next
+./topside-ctl "playlist:deep focus"
 ```
 
 See the comments at the top of `topside-ctl` for the full list.

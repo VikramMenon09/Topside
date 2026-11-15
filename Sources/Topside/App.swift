@@ -204,7 +204,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Scripting hook: post the distributed notification "local.topside.control" with an object of
         // "open", "open:<tab>", "close", "settings", "shelf:<path>", "timer:<seconds>", "stoptimer",
-        // "toast:<text>" or "media:<play|next|previous>" to drive the notch from scripts.
+        // "toast:<text>", "media:<play|next|previous>", "playlist:<name>" or
+        // "shuffle:<name>" or "playlists" to drive the notch from scripts.
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("local.topside.control"), object: nil, queue: .main) { [weak self] note in
             guard let self, let cmd = note.object as? String, let model = self.controllers.first?.model else { return }
             let parts = cmd.split(separator: ":", maxSplits: 1).map(String.init)
@@ -219,6 +220,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "timer": TimerService.shared.begin(seconds: Double(parts.count > 1 ? parts[1] : "") ?? 60)
             case "stoptimer": TimerService.shared.stop()
             case "toast": ActivityCenter.shared.show(Toast(icon: "bell.fill", text: parts.count > 1 ? parts[1] : "Hello"))
+            case "playlists":
+                PlaylistService.shared.browsing = true
+                model.pinned = true
+                model.open(.home)
+            case "playlist", "shuffle":
+                if parts.count > 1 {
+                    PlaylistService.shared.playByName(parts[1], shuffle: parts[0] == "shuffle")
+                }
             case "media":
                 switch parts.count > 1 ? parts[1] : "" {
                 case "next": MediaService.shared.next()
