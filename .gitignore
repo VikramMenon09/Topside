@@ -1,3 +1,4 @@
 .build/
 Topside.app/
 .DS_Store
+.vercel

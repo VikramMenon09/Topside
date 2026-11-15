@@ -2,6 +2,9 @@
 
 A macOS notch app. Hover over the notch and a compact panel drops down.
 
+**[Try the web demo](https://topside-brown.vercel.app)**: an interactive version of the panel that runs
+in any browser, on sample data. The app itself is macOS-only.
+
 | Tab | What it does |
 | --- | --- |
 | **Playing** | Now playing from any app, with scrubber, controls, album art and optional lyrics. Your Music playlists, their tracks, and a queue are one click away |
@@ -33,6 +36,13 @@ cd docs && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless --disable-gpu --no-pdf-header-footer \
   --print-to-pdf=Topside-Build-Guide.pdf "file://$PWD/guide.html"
 ```
+
+## Web demo
+
+[`web/`](web/) is a static page (plain HTML, CSS and JavaScript, no build step) that recreates the
+panel from the Swift views: the same sizes, type, colours and spring timings, with every tab working
+on sample data. Files you drop on it and the camera stay in your browser. Serve the folder with any
+static server, for example `python3 -m http.server -d web`.
 
 ## Build
 
