@@ -3,10 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Topside · web demo</title>
+<title>Topside: web demo</title>
 <meta name="description" content="An interactive web demo of Topside, a macOS app that turns the MacBook notch into a drop-down panel: now playing, calendar, file tray, clipboard, timers, mirror, system stats, teleprompter and agents.">
 <meta name="theme-color" content="#2b2160">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232b2160'/%3E%3Cpath d='M6 8h20v6a6 6 0 0 1-6 6h-8a6 6 0 0 1-6-6z' fill='%23000'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="canonical" href="https://topside-brown.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Topside">
+<meta property="og:title" content="Topside: the MacBook notch as a drop-down panel">
+<meta property="og:description" content="Music, calendar, file tray, clipboard history, timers, mirror, system stats, teleprompter and agent status, under the notch. Try the interactive demo.">
+<meta property="og:url" content="https://topside-brown.vercel.app/">
+<meta property="og:image" content="https://topside-brown.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Topside panel open under a MacBook notch, with the text Topside, the notch as a drop-down panel">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Topside: the MacBook notch as a drop-down panel">
+<meta name="twitter:description" content="Music, calendar, file tray, clipboard history, timers, mirror, system stats, teleprompter and agent status, under the notch.">
+<meta name="twitter:image" content="https://topside-brown.vercel.app/og.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -104,7 +118,7 @@
   <section class="hero">
     <p class="hint" id="hint"><svg class="ic" width="14" height="14" aria-hidden="true"><use href="#i-up"/></svg> <span id="hintText">Rest the pointer on the notch</span></p>
     <h1>Topside</h1>
-    <p class="lede">A macOS app that lives in the MacBook's notch. Rest the pointer on it and a compact panel drops down with music, your day, a file tray, clipboard history, timers, a mirror, system stats, a teleprompter and your coding agents.</p>
+    <p class="lede">Topside is a macOS app that turns the MacBook notch into a drop-down panel. Rest the pointer on the notch to open music, your calendar, a file tray, clipboard history, timers, a mirror, system stats, a teleprompter and coding-agent status.</p>
     <div class="note">
       <strong>This is a web demo.</strong> Topside is a native Swift app for macOS 14 and later, so here it runs on sample data: it does not read your music, calendar, files or computer. The camera is only used in Mirror, after you click, and stays on your device.
     </div>
@@ -158,10 +172,12 @@
   <footer class="foot">
     <p>Topside is written in Swift with SwiftUI and AppKit, about 3,400 lines and no third-party packages. Build it with <code>./build.sh --run</code> on macOS 14 or later.</p>
     <p><a href="https://github.com/VikramMenon09/Topside">github.com/VikramMenon09/Topside</a></p>
+    <p>&copy; <span id="year">2026</span> Vikram Menon</p>
   </footer>
 </main>
 
 <input type="file" id="filePick" multiple hidden>
+<script>document.getElementById("year").textContent = new Date().getFullYear();</script>
 <script src="app.js"></script>
 </body>
 </html>
