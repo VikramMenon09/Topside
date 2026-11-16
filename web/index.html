@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Topside: web demo</title>
 <meta name="description" content="An interactive web demo of Topside, a macOS app that turns the MacBook notch into a drop-down panel: now playing, calendar, file tray, clipboard, timers, mirror, system stats, teleprompter and agents.">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#efefed">
+<script>try { if (localStorage.getItem("topside-theme") === "dark") document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {}</script>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="canonical" href="https://topside-brown.vercel.app/">
 <meta property="og:type" content="website">
@@ -16,7 +17,7 @@
 <meta property="og:image" content="https://topside-brown.vercel.app/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Topside in black and grey: a panel open under the notch, with the title Topside and the line, the MacBook notch as a drop-down panel">
+<meta property="og:image:alt" content="Topside on a light grey card, with the title Topside and the line, the MacBook notch as a drop-down panel">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Topside: the MacBook notch as a drop-down panel">
 <meta name="twitter:description" content="Music, calendar, file tray, clipboard history, timers, mirror, system stats, teleprompter and agent status, under the notch.">
@@ -173,11 +174,31 @@
     <p>Topside is written in Swift with SwiftUI and AppKit, about 3,400 lines and no third-party packages. Build it with <code>./build.sh --run</code> on macOS 14 or later.</p>
     <p><a href="https://github.com/VikramMenon09/Topside">github.com/VikramMenon09/Topside</a></p>
     <p>&copy; <span id="year">2026</span> Vikram Menon</p>
+    <p><button type="button" class="theme" id="themeToggle">Dark</button></p>
   </footer>
 </main>
 
 <input type="file" id="filePick" multiple hidden>
 <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById("themeToggle");
+  var meta = document.querySelector('meta[name="theme-color"]');
+  function sync() {
+    var dark = root.getAttribute("data-theme") === "dark";
+    btn.textContent = dark ? "Light" : "Dark";
+    btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    if (meta) meta.setAttribute("content", dark ? "#0d0d0d" : "#efefed");
+  }
+  btn.addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") !== "dark";
+    if (dark) root.setAttribute("data-theme", "dark"); else root.removeAttribute("data-theme");
+    try { localStorage.setItem("topside-theme", dark ? "dark" : "light"); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
+</script>
 <script src="app.js"></script>
 </body>
 </html>

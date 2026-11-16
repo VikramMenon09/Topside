@@ -30,7 +30,7 @@ const ib = (icon, size, cls, label, attrs = '') =>
 const pill = (text, attrs = '', active = false) => `<button class="pill${active ? ' active' : ''}" ${attrs}>${text}</button>`;
 const sample = (t = 'Sample') => `<span class="sample" title="Made-up data for the demo">${t}</span>`;
 const touchOnly = matchMedia('(hover: none)').matches;
-const C = { green: '#d2d2d2', blue: '#9c9c9c', purple: '#7e7e7e', red: '#c4c4c4', orange: '#bdbdbd', yellow: '#e2e2e2', gray: '#6a6a6a', pink: '#a8a8a8', teal: '#b5b5b5' };
+const C = { green: '#30d158', blue: '#0a84ff', purple: '#bf5af2', red: '#ff453a', orange: '#ff9f0a', yellow: '#ffd60a', gray: '#8e8e93', pink: '#ff375f', teal: '#64d2ff' };
 
 // ---------- model ----------
 
@@ -169,14 +169,14 @@ document.addEventListener('keydown', e => {
 // ---------- alerts under the notch ----------
 
 let toastT;
-function toast(icon, text, tint = '#e0e0e0', secs = 5) {
+function toast(icon, text, tint = '#fff', secs = 5) {
   // The alert drops down beneath the collapsed notch. If nobody is pointing at an open,
   // unpinned panel it would already have closed in the app, so close it here too.
   if (M.open && !M.pinned && !M.inside) closePanel();
   const html = `<span style="color:${tint}">${ic(icon, 12)}</span><span>${esc(text)}</span>`;
   toastEl.innerHTML = html;
   notch.classList.add('has-toast');
-  if (M.open) caption.innerHTML = `<span style="display:inline-flex;gap:6px;align-items:center;color:#e0e0e0">${html}</span>`;
+  if (M.open) caption.innerHTML = `<span style="display:inline-flex;gap:6px;align-items:center;color:#fff">${html}</span>`;
   clearTimeout(toastT);
   toastT = setTimeout(() => { notch.classList.remove('has-toast'); caption.textContent = CAPTION; }, secs * 1000);
 }
@@ -216,7 +216,8 @@ function pane(id, cls, html) {
 
 // ===== Playing =====
 
-const ART = [['#4a4a4a'], ['#5a5a5a'], ['#3a3a3a'], ['#6a6a6a'], ['#444'], ['#555'], ['#333'], ['#666']];
+const ART = [['#ff7a59', '#7b2ff7'], ['#00c6ff', '#0072ff'], ['#f7971e', '#ffd200'], ['#11998e', '#38ef7d'],
+  ['#fc466b', '#3f5efb'], ['#c471f5', '#fa71cd'], ['#2c3e50', '#4ca1af'], ['#ee0979', '#ff6a00']];
 const mk = (name, artist, dur) => ({ name, artist, dur });
 const PLAYLISTS = [
   { name: 'Deep Focus', tracks: [mk('Paper Lanterns', 'Mira Okafor', 214), mk('Slow Orbit', 'The Quiet Hours', 247), mk('Glasshouse', 'Lumen Drift', 198), mk('North of Nowhere', 'Halden', 263), mk('Afterimage', 'Sora Vale', 231), mk('Tidewater', 'Kestrel Bay', 205), mk('Low Sun', 'Mira Okafor', 189)] },
@@ -275,7 +276,7 @@ const Player = (() => {
     const t = track();
     $('#pTitle', el).textContent = t.name;
     $('#pArtist', el).textContent = t.artist;
-    $('#pArt', el).style.background = t.art[0];
+    $('#pArt', el).style.background = `linear-gradient(135deg, ${t.art[0]}, ${t.art[1]})`;
     $('#pBar', el).setAttribute('aria-valuemax', String(t.dur));
     renderPlay(); renderPos();
   }
@@ -514,7 +515,7 @@ const Tray = (() => {
     const b = $('#trayBusy', el); b.textContent = text;
     clearTimeout(busyT); busyT = setTimeout(() => { b.textContent = ''; }, 2600);
   }
-  const extColor = ext => ({ pdf: '#8a8a8a', zip: '#6a6a6a', png: '#777', jpg: '#777', jpeg: '#777', gif: '#777', heic: '#777', mp3: '#5e5e5e', wav: '#5e5e5e', mov: '#6e6e6e', mp4: '#6e6e6e' }[ext] || '#555');
+  const extColor = ext => ({ pdf: '#ff453a', zip: '#8e8e93', png: '#30d158', jpg: '#30d158', jpeg: '#30d158', gif: '#30d158', heic: '#30d158', mp3: '#ff375f', wav: '#ff375f', mov: '#bf5af2', mp4: '#bf5af2', swift: '#ff9f0a', js: '#ffd60a', ts: '#0a84ff', py: '#0a84ff', txt: '#636366', md: '#636366', doc: '#0a84ff', docx: '#0a84ff', key: '#0a84ff', pages: '#ff9f0a', xlsx: '#30d158', csv: '#30d158', sh: '#3a3a3c' }[ext] || '#636366');
   function render() {
     $('#trayH', el).textContent = items.length ? `Tray · ${items.length}` : 'Tray';
     $('#trayBtns', el).innerHTML = (items.length ? pill('Clear', 'data-a="clear"') : '');
@@ -614,8 +615,8 @@ const Clips = (() => {
     { text: 'npm run build && npm run preview', t: Date.now() - 2 * min },
     { text: 'https://github.com/VikramMenon09/Topside', t: Date.now() - 5 * min },
     { text: 'Meeting moved to 3:30, same room', t: Date.now() - 12 * min },
-    { image: '#4a4a4a', t: Date.now() - 26 * min },
-    { text: '#8A8A8A', t: Date.now() - 41 * min },
+    { image: 'linear-gradient(135deg,#ff7a59,#7b2ff7)', t: Date.now() - 26 * min },
+    { text: '#0A84FF', t: Date.now() - 41 * min },
     { text: "SELECT id, total FROM orders WHERE status = 'open';", t: Date.now() - 95 * min },
     { text: 'Thanks! I\'ll take a look tonight and get back to you.', t: Date.now() - 3 * 60 * min },
     { text: 'git switch -c web-demo', t: Date.now() - 5 * 60 * min },
@@ -676,7 +677,7 @@ const Clips = (() => {
     clips.unshift({ id: ++id, text, t: Date.now() });
     if (clips.length > 50) clips.pop();
     if (M.open && M.tab === 'clipboard') render();
-    else toast('clipboard', 'Copied to Clips', '#e0e0e0', 2.5);
+    else toast('clipboard', 'Copied to Clips', '#fff', 2.5);
   });
   render();
   return { show: render };
